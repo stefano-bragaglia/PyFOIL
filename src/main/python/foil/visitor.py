@@ -7,7 +7,6 @@ from arpeggio import NonTerminal
 from arpeggio import PTNodeVisitor
 from arpeggio import Terminal
 
-
 Node = Union[Terminal, NonTerminal]
 
 
@@ -20,6 +19,39 @@ class FoilVisitor(PTNodeVisitor):
         from foil.model import Program
 
         return Program(tuple(children))
+
+    def visit_statement(self, node: Node, children: List) -> Union['Clause', 'Example']:
+        return children[0]
+
+    def visit_example(self, node: Node, children: List) -> 'Example':
+        from foil.model import Example
+
+        return Example(children[0], children[1])
+
+    def visit_label(self, node: Node, children: List) -> bool:
+        return node.value == '+'
+
+    def visit_ground_literal(self, node: Node, children: List) -> 'Literal':
+        from foil.model import Literal
+
+        try:
+            return Literal(children[0], children[1])
+        except IndexError:
+            return Literal(children[0], False)
+
+    def visit_ground_atom(self, node: Node, children: List) -> 'Atom':
+        from foil.model import Atom
+
+        try:
+            return Atom(children[0], tuple(children[1]))
+        except IndexError:
+            return Atom(children[0], tuple())
+
+    def visit_ground_terms(self, node: Node, children: List) -> List[Union[bool, int, float, str]]:
+        return [child for child in children]
+
+    def visit_ground_term(self, node: Node, children: List) -> Union[bool, int, float, str]:
+        return children[0]
 
     def visit_clause(self, node: Node, children: List) -> 'Clause':
         from foil.model import Clause
