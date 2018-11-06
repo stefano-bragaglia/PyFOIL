@@ -5,16 +5,44 @@ from arpeggio import RegExMatch
 from arpeggio import ZeroOrMore
 
 
-def nothing():
-    return EOF
-
-
 def comment():
     return RegExMatch(r"%.*")
 
 
 def program():
-    return ZeroOrMore(clause), EOF
+    return ZeroOrMore(clause), Optional(scope), ZeroOrMore(clause), EOF
+
+
+def scope():
+    return '#', literal, Optional(':', Optional(examples)), '.'
+
+
+def examples():
+    return example, ZeroOrMore(',', example)
+
+
+def example():
+    return Optional(label), substitution
+
+
+def label():
+    return ['(+)', '(-)']
+
+
+def substitution():
+    return '{', Optional(assignments), '}'
+
+
+def assignments():
+    return assignment, ZeroOrMore(',', assignment)
+
+
+def assignment():
+    return variable, ':', value
+
+
+def value():
+    return [boolean, number, string, identifier]
 
 
 def clause():
