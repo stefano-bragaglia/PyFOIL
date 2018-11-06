@@ -28,13 +28,10 @@ def is_variable(term: Term) -> bool:
 
 
 def term_repr(term: Term) -> str:
-    if any(isinstance(term, c) for c in [bool, float, int]):
-        return str(term)
+    if isinstance(term, str):
+        return term if re.match(r'^[_a-zA-Z][_a-zA-Z0-9]*$', term) else '"%s"' % term
 
-    if isinstance(term, str) and re.match(r'[_a-zA-Z][_a-zA-Z0-9]*', term):
-        return str(term)
-
-    return repr(term)
+    return str(term)
 
 
 class Atom:
