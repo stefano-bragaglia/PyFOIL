@@ -1,15 +1,16 @@
 from typing import Iterable
 from typing import List
 from typing import Optional
-from typing import Tuple
 
 from arpeggio import ParserPython
 from arpeggio import visit_parse_tree
 
+from foil.unification import Derivation
 from foil.unification import is_ground
 from foil.unification import is_variable
 from foil.unification import normalize
 from foil.unification import simplify
+from foil.unification import Step
 from foil.unification import Substitution
 from foil.unification import Term
 from foil.unification import unify
@@ -283,19 +284,19 @@ class Program:
     def is_ground(self) -> bool:
         return all(c.is_ground() for c in self._clauses)
 
-    def resolve(self, query: Literal) -> Optional[List[Tuple[int, Literal, Substitution]]]:
+    def resolve(self, query: Literal) -> Optional[Derivation]:
         if not query.is_ground():
             raise ValueError("'query' must be ground: %s" % query)
 
         return self._tabling.setdefault(query, self._resolve(query))
 
-    def _resolve(self, query: Literal) -> Optional[List[Tuple[int, Literal, Substitution]]]:
+    def _resolve(self, query: Literal) -> Optional[Derivation]:
         for i, clause in enumerate(self._clauses):
             substitution = clause.head.unify(query)
             if substitution is None:
                 continue
 
-            derivation = [(i, query, substitution)]
+            derivation = [Step(i, query, substitution)]
             if not clause.body:
                 return derivation
 

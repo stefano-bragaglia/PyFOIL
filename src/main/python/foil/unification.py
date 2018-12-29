@@ -1,12 +1,17 @@
 import re
+from collections import namedtuple
 from typing import Dict
+from typing import List
 from typing import Optional
 from typing import Union
 
 Value = Union[bool, float, int, str]
 Variable = str
 Term = Union[Value, Variable]
+
 Substitution = Dict[Variable, Term]
+Step = namedtuple('Step', ['index', 'literal', 'substitution'])
+Derivation = List[Step]
 
 
 def is_ground(term: Term) -> bool:

@@ -16,9 +16,9 @@ class FoilVisitor(PTNodeVisitor):
         return node.value
 
     def visit_program(self, node: Node, children: List) -> 'Program':
-        from temp.model import Program
+        from foil.models import Program
 
-        return Program(tuple(children))
+        return Program(children)
 
     def visit_statement(self, node: Node, children: List) -> Union['Clause', 'Example']:
         return children[0]
