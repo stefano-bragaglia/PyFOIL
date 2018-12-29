@@ -23,6 +23,7 @@ default_task = ["clean", "analyze", "publish"]
 
 @init
 def set_properties(project):
+    project.set_property('flake8_ignore', "F821")
     project.set_property("flake8_break_build", True)  # default is False
     project.set_property("flake8_verbose_output", True)  # default is False
     project.set_property("flake8_radon_max", 10)  # default is None

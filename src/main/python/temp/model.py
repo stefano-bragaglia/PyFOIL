@@ -9,11 +9,11 @@ from typing import Union
 from arpeggio import ParserPython
 from arpeggio import visit_parse_tree
 
-from foil.grammar import clause
-from foil.grammar import comment
-from foil.grammar import literal
-from foil.grammar import program
-from foil.visitor import FoilVisitor
+from foil.language.grammar import clause
+from foil.language.grammar import comment
+from foil.language.grammar import literal
+from foil.language.grammar import program
+from foil.language.visitor import FoilVisitor
 
 Value = Union[bool, float, int, str]
 Variable = str

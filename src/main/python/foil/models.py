@@ -14,14 +14,14 @@ from foil.unification import Step
 from foil.unification import Substitution
 from foil.unification import Term
 from foil.unification import unify
-from foil.visitor import FoilVisitor
+from foil.language.visitor import FoilVisitor
 
 
 class Atom:
     @staticmethod
     def parse(content: str) -> 'Atom':
-        from foil.grammar import atom
-        from foil.grammar import comment
+        from foil.language.grammar import atom
+        from foil.language.grammar import comment
 
         parser = ParserPython(atom, comment_def=comment)
         parse_tree = parser.parse(content)
@@ -101,8 +101,8 @@ class Atom:
 class Literal:
     @staticmethod
     def parse(content: str) -> 'Literal':
-        from foil.grammar import literal
-        from foil.grammar import comment
+        from foil.language.grammar import literal
+        from foil.language.grammar import comment
 
         parser = ParserPython(literal, comment_def=comment)
         parse_tree = parser.parse(content)
@@ -167,8 +167,8 @@ class Literal:
 class Clause:
     @staticmethod
     def parse(content: str) -> 'Clause':
-        from foil.grammar import clause
-        from foil.grammar import comment
+        from foil.language.grammar import clause
+        from foil.language.grammar import comment
 
         parser = ParserPython(clause, comment_def=comment)
         parse_tree = parser.parse(content)
@@ -235,8 +235,8 @@ class Clause:
 class Program:
     @staticmethod
     def parse(content: str) -> 'Program':
-        from foil.grammar import program
-        from foil.grammar import comment
+        from foil.language.grammar import program
+        from foil.language.grammar import comment
 
         parser = ParserPython(program, comment_def=comment)
         parse_tree = parser.parse(content)
