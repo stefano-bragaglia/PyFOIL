@@ -66,7 +66,7 @@ class Atom:
         if not self._terms:
             return normalize(self._functor)
 
-        return '%s(%s)' % (normalize(self._functor), ', '.join(normalize(term) for term in self._terms))
+        return '%s(%s)' % (normalize(self._functor), ','.join(normalize(term) for term in self._terms))
 
     def get_arity(self) -> int:
         return len(self._terms)
