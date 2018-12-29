@@ -16,7 +16,7 @@ class FoilVisitor(PTNodeVisitor):
         return node.value
 
     def visit_program(self, node: Node, children: List) -> 'Program':
-        from foil.model import Program
+        from temp.model import Program
 
         return Program(tuple(children))
 
@@ -24,7 +24,7 @@ class FoilVisitor(PTNodeVisitor):
         return children[0]
 
     def visit_example(self, node: Node, children: List) -> 'Example':
-        from foil.model import Example
+        from temp.model import Example
 
         return Example(children[0], children[1])
 
@@ -32,20 +32,20 @@ class FoilVisitor(PTNodeVisitor):
         return node.value == '+'
 
     def visit_ground_literal(self, node: Node, children: List) -> 'Literal':
-        from foil.model import Literal
+        from foil.models import Literal
 
         try:
-            return Literal(children[0], children[1])
+            return Literal(children[1], children[0])
         except IndexError:
             return Literal(children[0], False)
 
     def visit_ground_atom(self, node: Node, children: List) -> 'Atom':
-        from foil.model import Atom
+        from foil.models import Atom
 
         try:
-            return Atom(children[0], tuple(children[1]))
+            return Atom(children[0], children[1])
         except IndexError:
-            return Atom(children[0], tuple())
+            return Atom(children[0])
 
     def visit_ground_terms(self, node: Node, children: List) -> List[Union[bool, int, float, str]]:
         return [child for child in children]
@@ -54,21 +54,21 @@ class FoilVisitor(PTNodeVisitor):
         return children[0]
 
     def visit_clause(self, node: Node, children: List) -> 'Clause':
-        from foil.model import Clause
+        from foil.models import Clause
 
         try:
-            return Clause(children[0], tuple(children[1]))
+            return Clause(children[0], children[1])
         except IndexError:
-            return Clause(children[0], tuple())
+            return Clause(children[0])
 
     def visit_literals(self, node: Node, children: List) -> List['Literal']:
         return [child for child in children]
 
     def visit_literal(self, node: Node, children: List) -> 'Literal':
-        from foil.model import Literal
+        from foil.models import Literal
 
         try:
-            return Literal(children[0], children[1])
+            return Literal(children[1], children[0])
         except IndexError:
             return Literal(children[0], False)
 
@@ -76,12 +76,12 @@ class FoilVisitor(PTNodeVisitor):
         return True if len(children) % 2 == 1 else False
 
     def visit_atom(self, node: Node, children: List) -> 'Atom':
-        from foil.model import Atom
+        from foil.models import Atom
 
         try:
-            return Atom(children[0], tuple(children[1]))
+            return Atom(children[0], children[1])
         except IndexError:
-            return Atom(children[0], tuple())
+            return Atom(children[0])
 
     # noinspection RegExpSingleCharAlternation
     def visit_functor(self, node: Node, children: List) -> bool:

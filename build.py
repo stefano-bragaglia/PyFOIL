@@ -41,7 +41,7 @@ def set_properties(project):
     project.set_property("coverage_branch_partial_threshold_warn", 35)  # default is 0
 
     project.set_property("dir_source_unittest_python", "src/test/python")
-    project.set_property("unittest_module_glob", "tests_*")
+    project.set_property("unittest_module_glob", "test_*")
 
     project.depends_on("assertpy")
     project.depends_on("coloredlogs")

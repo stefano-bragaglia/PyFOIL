@@ -1,8 +1,8 @@
-from foil.model import Clause
-from foil.model import Example
-from foil.model import Literal
-from foil.model import Program
-from foil.model import term_repr
+from temp.model import Clause
+from temp.model import Example
+from temp.model import Literal
+from temp.model import Program
+from temp.model import term_repr
 
 
 def abstract():
@@ -84,5 +84,7 @@ def parenthood():
 
 if __name__ == '__main__':
     parenthood()
+    print('-' * 120)
     connectedness()
+    print('-' * 120)
     abstract()
