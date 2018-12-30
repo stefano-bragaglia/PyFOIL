@@ -6,7 +6,6 @@ from arpeggio import ParserPython
 from arpeggio import visit_parse_tree
 
 from foil.language.visitor import FoilVisitor
-from foil.rete import Engine
 from foil.unification import Derivation
 from foil.unification import is_ground
 from foil.unification import is_variable
@@ -176,7 +175,7 @@ class Clause:
         self._body = body or []
 
     def __hash__(self) -> int:
-        value = hash((self._head, *self._body))
+        return hash((self._head, *self._body))
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Clause):
@@ -310,6 +309,8 @@ class Program:
         return self._tabling.setdefault(None, self._get_world())
 
     def _get_world(self) -> List[Literal]:
+        from foil.rete import Engine
+
         engine = Engine()
         for clause in self._clauses:
             engine.load(clause)

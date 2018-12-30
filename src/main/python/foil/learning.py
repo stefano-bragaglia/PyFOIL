@@ -1,3 +1,4 @@
+import math
 from enum import Enum
 from itertools import permutations
 from typing import Dict
@@ -190,17 +191,30 @@ def covers(background: Theory, hypothesis: Theory, relation: Literal, examples: 
     program = Program(list({*background, *hypothesis}))
     world = program.get_world()
 
-    subset = []
+    covered = []
     for example in examples:
         fact = relation.substitute(example.assignment)
-        if fact in world and example not in subset:
-            subset.append(example)
+        if fact in world and example not in covered:
+            covered.append(example)
 
-    return subset
+    return covered
 
 
-def score(background: Theory, hypothesis: Theory, relation: Literal, examples: List[Example]) -> List[Example]:
+def common(examples1: List[Example], examples2: List[Example]) -> int:
+    return sum(1 for e in examples1 if e.label is Label.POSITIVE and e in examples2)
+
+
+def entropy(examples: List[Example]) -> float:
+    return -math.log2(sum(1 for e in examples if e.label is Label.POSITIVE) / len(examples))
+
+
+def score(background: Theory, hypothesis: Theory, relation: Literal, examples: List[Example]) -> float:
     pass
+
+
+def learn(negatives: List[Example]):
+    while negatives:
+        pass
 
 
 if __name__ == '__main__':
