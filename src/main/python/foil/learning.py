@@ -14,8 +14,8 @@ Assignment = Dict[Variable, Value]
 
 
 class Label(Enum):
-    NEGATIVE = 0
-    POSITIVE = 1
+    NEGATIVE = '-'
+    POSITIVE = '+'
 
 
 class Example:
@@ -36,11 +36,7 @@ class Example:
         return self._assignment.keys()
 
     def __hash__(self) -> int:
-        value = hash(self._label)
-        for var, val in self._assignment.items():
-            value = value ** hash(var) ** hash(val)
-
-        return value
+        return hash((*self._assignment.items(), self._label))
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Example):
@@ -54,7 +50,7 @@ class Example:
     def __repr__(self) -> str:
         return '<%s>(%s)' % (
             ', '.join('%s=%s' % (normalize(v), normalize(t)) for v, t in sorted(self._assignment.items())),
-            '-' if self._label == Label.NEGATIVE else '+'
+            self._label.value
         )
 
     def get_value(self, variable: Variable) -> Optional[Value]:
@@ -75,11 +71,7 @@ class Target:
         return self._examples
 
     def __hash__(self) -> int:
-        value = hash(self._relation)
-        for example in self._examples:
-            value = value ** hash(example)
-
-        return value
+        return hash((self._relation, *self._examples))
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Target):
@@ -106,31 +98,24 @@ class Target:
 
 class Problem:
 
-    def __init__(self, program: Program, targets: List[Target] = None):
+    def __init__(self, target: Target, program: Program):
+        self._target = target
         self._program = program
-        self._targets = targets or []
 
     def __hash__(self) -> int:
-        value = hash(self._program)
-        for target in self._targets:
-            value = value ** hash(target)
-
-        return value
+        return hash((self._target, self._program))
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Problem):
             return False
 
-        if self._program != other._program:
+        if self._target != other._target:
             return False
 
-        if len(self._targets) != len(other._clauses):
-            return False
-
-        return all(c in other._clauses for c in self._clauses)
+        return self._program == other._program
 
     def __repr__(self) -> str:
-        return '\n'.join(repr(c) for c in self._clauses)
+        return '%s\n\n%s' % (repr(self._target), repr(self._program))
 
 
 if __name__ == '__main__':
@@ -139,5 +124,4 @@ if __name__ == '__main__':
     t = Target(Literal.parse('pred(A, B)'), [e1, e2])
     print(t)
 
-
-    # print(hash(e1), hash(e2))
+    print(hash(e1), hash(e2))

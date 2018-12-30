@@ -31,20 +31,8 @@ class Atom:
         self._functor = functor
         self._terms = terms or []
 
-    @property
-    def functor(self) -> str:
-        return self._functor
-
-    @property
-    def terms(self) -> Iterable[Term]:
-        return self._terms
-
     def __hash__(self) -> int:
-        value = hash(self._functor)
-        for term in self._terms:
-            value = value ** hash(term)
-
-        return value
+        return hash((self._functor, *self._terms))
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Atom):
@@ -67,6 +55,14 @@ class Atom:
             return normalize(self._functor)
 
         return '%s(%s)' % (normalize(self._functor), ','.join(normalize(term) for term in self._terms))
+
+    @property
+    def functor(self) -> str:
+        return self._functor
+
+    @property
+    def terms(self) -> Iterable[Term]:
+        return self._terms
 
     def get_arity(self) -> int:
         return len(self._terms)
@@ -113,7 +109,7 @@ class Literal:
         self._atom = atom
 
     def __hash__(self) -> int:
-        return hash(self._negated) ** hash(self._atom)
+        return hash((self._negated, self._atom))
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Literal):
@@ -179,11 +175,7 @@ class Clause:
         self._body = body or []
 
     def __hash__(self) -> int:
-        value = hash(self._head)
-        for literal in self._body:
-            value = value ** hash(literal)
-
-        return value
+        value = hash((self._head, *self._body))
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Clause):
@@ -247,11 +239,7 @@ class Program:
         self._tabling = {}
 
     def __hash__(self) -> int:
-        value = 1
-        for clause in self._clauses:
-            value = value ** hash(clause)
-
-        return value
+        return hash(tuple(self._clauses))
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Program):
