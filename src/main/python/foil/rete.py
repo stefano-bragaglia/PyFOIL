@@ -12,6 +12,7 @@ Payload = Tuple[List[Literal], Substitution]
 
 
 class Root:
+
     def __init__(self):
         self.children = set()
 
@@ -21,6 +22,7 @@ class Root:
 
 
 class Alpha:
+
     def __init__(self, pattern: 'Literal', parent: Root):
         self.parent = parent
         self.pattern = pattern
@@ -43,6 +45,7 @@ Node = Union[Alpha, 'Beta']
 
 
 class Beta:
+
     def __init__(self, parent_1: Node, parent_2: Alpha):
         self.parent_1 = parent_1
         self.parent_2 = parent_2
@@ -80,6 +83,7 @@ class Beta:
 
 
 class Leaf:
+
     def __init__(self, clause: Clause, parent: Node, root: Root, agenda: List[Clause]):
         self.parent = parent
         self.clause = clause
