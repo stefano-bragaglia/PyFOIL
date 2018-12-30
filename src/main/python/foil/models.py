@@ -6,6 +6,7 @@ from arpeggio import ParserPython
 from arpeggio import visit_parse_tree
 
 from foil.language.visitor import FoilVisitor
+from foil.rete import Engine
 from foil.unification import Derivation
 from foil.unification import is_ground
 from foil.unification import is_variable
@@ -309,30 +310,10 @@ class Program:
         return self._tabling.setdefault(None, self._get_world())
 
     def _get_world(self) -> List[Literal]:
-        from foil.rete import Alpha
-        from foil.rete import Beta
-        from foil.rete import Leaf
-        from foil.rete import Root
+        engine = Engine()
+        for clause in self._clauses:
+            engine.load(clause)
+        for fact in self._clauses:
+            engine.insert(fact)
 
-        table = {}
-        clauses = []
-        root = Root()
-        for rule in self._clauses:
-            if rule.is_fact():
-                clauses.append(rule)
-            else:
-                beta = None
-                for literal in rule.body:
-                    name = repr(literal)
-                    alpha = table.setdefault(name, Alpha(literal, root))
-                    if beta is None:
-                        beta = alpha
-                    else:
-                        name = '%s, %s' % (beta.name, alpha.name)
-                        beta = table.setdefault(name, Beta(beta, alpha))
-                Leaf(rule, beta, root, clauses)
-
-        for fact in self.get_facts():
-            root.notify(fact.head)
-
-        return list({c.head for c in clauses})
+        return list(engine.facts)

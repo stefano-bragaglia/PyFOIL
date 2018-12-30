@@ -1,3 +1,4 @@
+from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -100,3 +101,39 @@ class Leaf:
                 self.agenda.append(clause)
 
             self.root.notify(literal)
+
+
+class Engine:
+    _nodes = {}
+    _agenda = []
+    _root = Root()
+
+    @property
+    def clauses(self) -> Iterable[Clause]:
+        return self._agenda
+
+    @property
+    def facts(self) -> Iterable[Literal]:
+        return list({c.head for c in self._agenda})
+
+    def load(self, clause: Clause):
+        if clause.is_fact():
+            if clause not in self._agenda:
+                self._agenda.append(clause)
+        else:
+            beta = None
+            for literal in clause.body:
+                name = repr(literal)
+                alpha = self._nodes.setdefault(name, Alpha(literal, self._root))
+                if beta is None:
+                    beta = alpha
+                else:
+                    name = '%s, %s' % (beta.name, alpha.name)
+                    beta = self._nodes.setdefault(name, Beta(beta, alpha))
+            Leaf(clause, beta, self._root, self._agenda)
+
+    def insert(self, fact: Clause):
+        if not fact.is_fact():
+            raise ValueError('Not a fact: %s' % fact)
+
+        self._root.notify(fact.head)

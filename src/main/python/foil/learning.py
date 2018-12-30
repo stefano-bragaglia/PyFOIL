@@ -185,6 +185,11 @@ class Problem:
         return sorted(examples, key=lambda x: repr(x))
 
 
+def covers(background: List[Clause], hypothesis: List[Clause], examples: List[Example]) -> List[Example]:
+    program = Program()
+    pass
+
+
 if __name__ == '__main__':
     e1 = Example({'A': 0, 'B': 1}, Label.POSITIVE)
     e2 = Example({'A': 2, 'B': 1}, Label.NEGATIVE)
