@@ -5,6 +5,7 @@ from typing import Optional
 from arpeggio import ParserPython
 from arpeggio import visit_parse_tree
 
+from foil.language.visitor import FoilVisitor
 from foil.unification import Derivation
 from foil.unification import is_ground
 from foil.unification import is_variable
@@ -14,7 +15,6 @@ from foil.unification import Step
 from foil.unification import Substitution
 from foil.unification import Term
 from foil.unification import unify
-from foil.language.visitor import FoilVisitor
 
 
 class Atom:
@@ -268,6 +268,9 @@ class Program:
 
     def get_rules(self) -> Iterable[Clause]:
         return (c for c in self._clauses if not c.is_fact())
+
+    def is_empty(self) -> bool:
+        return not self._clauses
 
     def is_ground(self) -> bool:
         return all(c.is_ground() for c in self._clauses)

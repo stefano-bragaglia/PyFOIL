@@ -117,6 +117,9 @@ class Problem:
         return self._program == other._program
 
     def __repr__(self) -> str:
+        if self._program.is_empty():
+            return repr(self._target)
+
         return '%s\n\n%s' % (repr(self._target), repr(self._program))
 
     @property
@@ -151,6 +154,8 @@ if __name__ == '__main__':
     e1 = Example({'A': 0, 'B': 1}, Label.POSITIVE)
     e2 = Example({'A': 2, 'B': 1}, Label.NEGATIVE)
     t = Target(Literal.parse('pred(A, B)'), [e1, e2])
-    print(t)
+    p = Problem(t, Program())
+    print(p)
+
 
     print(hash(e1), hash(e2))
