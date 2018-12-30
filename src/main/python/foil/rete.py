@@ -133,7 +133,7 @@ class Engine:
             Leaf(clause, beta, self._root, self._agenda)
 
     def insert(self, fact: Clause):
-        if not fact.is_fact():
-            raise ValueError('Not a fact: %s' % fact)
+        if not fact.is_fact() or not fact.is_ground():
+            raise ValueError('Not a ground fact: %s' % fact)
 
         self._root.notify(fact.head)

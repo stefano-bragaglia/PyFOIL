@@ -16,6 +16,7 @@ from foil.unification import Value
 from foil.unification import Variable
 
 Assignment = Dict[Variable, Value]
+Theory = List[Clause]
 
 
 class Label(Enum):
@@ -185,8 +186,20 @@ class Problem:
         return sorted(examples, key=lambda x: repr(x))
 
 
-def covers(background: List[Clause], hypothesis: List[Clause], examples: List[Example]) -> List[Example]:
-    program = Program()
+def covers(background: Theory, hypothesis: Theory, relation: Literal, examples: List[Example]) -> List[Example]:
+    program = Program(list({*background, *hypothesis}))
+    world = program.get_world()
+
+    subset = []
+    for example in examples:
+        fact = relation.substitute(example.assignment)
+        if fact in world and example not in subset:
+            subset.append(example)
+
+    return subset
+
+
+def score(background: Theory, hypothesis: Theory, relation: Literal, examples: List[Example]) -> List[Example]:
     pass
 
 
