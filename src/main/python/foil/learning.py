@@ -4,9 +4,11 @@ from typing import Iterable
 from typing import List
 from typing import Optional
 
+from foil.models import Clause
 from foil.models import Literal
 from foil.models import Program
 from foil.unification import normalize
+from foil.unification import Term
 from foil.unification import Value
 from foil.unification import Variable
 
@@ -22,18 +24,6 @@ class Example:
     def __init__(self, assignment: Assignment, label: Label = Label.POSITIVE):
         self._assignment = assignment
         self._label = label
-
-    @property
-    def assignment(self) -> Assignment:
-        return self._assignment
-
-    @property
-    def label(self) -> Label:
-        return self._label
-
-    @property
-    def variables(self) -> Iterable[Variable]:
-        return self._assignment.keys()
 
     def __hash__(self) -> int:
         return hash((*self._assignment.items(), self._label))
@@ -53,6 +43,18 @@ class Example:
             self._label.value
         )
 
+    @property
+    def assignment(self) -> Assignment:
+        return self._assignment
+
+    @property
+    def label(self) -> Label:
+        return self._label
+
+    @property
+    def variables(self) -> Iterable[Variable]:
+        return self._assignment.keys()
+
     def get_value(self, variable: Variable) -> Optional[Value]:
         return self._assignment.get(variable)
 
@@ -61,14 +63,6 @@ class Target:
     def __init__(self, relation: Literal, examples: List[Example] = None):
         self._relation = relation
         self._examples = examples or []
-
-    @property
-    def relation(self) -> Literal:
-        return self._relation
-
-    @property
-    def examples(self) -> Iterable[Example]:
-        return self._examples
 
     def __hash__(self) -> int:
         return hash((self._relation, *self._examples))
@@ -95,6 +89,14 @@ class Target:
 
         return '#%s: %s.' % (repr(self._relation), ', '.join(repr(e) for e in self._examples))
 
+    @property
+    def relation(self) -> Literal:
+        return self._relation
+
+    @property
+    def examples(self) -> Iterable[Example]:
+        return self._examples
+
 
 class Problem:
 
@@ -116,6 +118,33 @@ class Problem:
 
     def __repr__(self) -> str:
         return '%s\n\n%s' % (repr(self._target), repr(self._program))
+
+    @property
+    def target(self) -> Target:
+        return self.target
+
+    @property
+    def clauses(self) -> Iterable[Clause]:
+        return self._program.clauses
+
+    @property
+    def program(self) -> Program:
+        return self._program
+
+    def get_clause(self, index: int) -> Optional[Clause]:
+        return self._program.get_clause(index)
+
+    def get_constants(self) -> List[Term]:
+        return self._program.get_constants()
+
+    def get_facts(self) -> Iterable[Clause]:
+        return self._program.get_facts()
+
+    def get_rules(self) -> Iterable[Clause]:
+        return self._program.get_rules()
+
+    def is_ground(self) -> bool:
+        return self._program.is_ground()
 
 
 if __name__ == '__main__':
