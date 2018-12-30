@@ -17,6 +17,47 @@ from foil.unification import Term
 from foil.unification import unify
 
 
+class Mask:
+
+    def __init__(self, negated: bool, functor: str, arity: int):
+        self._negated = negated
+        self._functor = functor
+        self._arity = arity
+
+    def __hash__(self) -> int:
+        return hash((self._negated, self._functor, self._arity))
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Mask):
+            return False
+
+        if self._negated is not other._negated:
+            return False
+
+        if self._arity is not other._arity:
+            return False
+
+        return self._functor == other._functor
+
+    def __repr__(self) -> str:
+        if self._negated:
+            return '~%s/%d' % (self._functor, self._arity)
+
+        return '%s/%d' % (self._functor, self._arity)
+
+    @property
+    def negated(self) -> bool:
+        return self._negated
+
+    @property
+    def functor(self) -> str:
+        return self._functor
+
+    @property
+    def arity(self) -> int:
+        return self._arity
+
+
 class Atom:
     @staticmethod
     def parse(content: str) -> 'Atom':
@@ -144,6 +185,9 @@ class Literal:
     def get_complement(self) -> 'Literal':
         return Literal(self._atom, not self._negated)
 
+    def get_mask(self) -> Mask:
+        return Mask(self._negated, self.functor, self.get_arity())
+
     def is_ground(self) -> bool:
         return self._atom.is_ground()
 
@@ -266,7 +310,7 @@ class Program:
         return sorted(constants, key=lambda x: str(repr(x)))
 
     def get_facts(self) -> Iterable[Clause]:
-        return [c for c in self._clauses if c.is_fact()]
+        return [c for c in self._clauses if c.is_fact() and c.is_ground()]
 
     def get_rules(self) -> Iterable[Clause]:
         return (c for c in self._clauses if not c.is_fact())
@@ -314,7 +358,7 @@ class Program:
         engine = Engine()
         for clause in self._clauses:
             engine.load(clause)
-        for fact in self._clauses:
+        for fact in self.get_facts():
             engine.insert(fact)
 
         return list(engine.facts)

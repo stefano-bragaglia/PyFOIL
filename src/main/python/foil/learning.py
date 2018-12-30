@@ -8,6 +8,7 @@ from typing import Optional
 
 from foil.models import Clause
 from foil.models import Literal
+from foil.models import Mask
 from foil.models import Program
 from foil.unification import is_ground
 from foil.unification import is_variable
@@ -144,7 +145,7 @@ class Problem:
 
     @property
     def target(self) -> Target:
-        return self.target
+        return self._target
 
     @property
     def clauses(self) -> Iterable[Clause]:
@@ -168,6 +169,15 @@ class Problem:
 
     def get_rules(self) -> Iterable[Clause]:
         return self._program.get_rules()
+
+    def get_masks(self) -> List[Mask]:
+        masks = []
+        for literal in [*[c.head for c in self._program.clauses], self._target.relation]:
+            mask = literal.get_mask()
+            if mask not in masks:
+                masks.append(mask)
+
+        return masks
 
     def is_ground(self) -> bool:
         return self._program.is_ground()

@@ -1,5 +1,3 @@
-from math import inf
-from math import log
 from typing import Iterable
 from typing import List
 from typing import Optional
@@ -7,6 +5,7 @@ from typing import Tuple
 
 from foil.models import Clause
 from foil.models import Literal
+from foil.unification import is_variable
 from foil.unification import Substitution
 
 
@@ -116,66 +115,66 @@ class TrainingSet:
 
         return count, result
 
-    def foil(self, target: Literal, examples: List[Example]) -> List[Clause]:
-        training_set = TrainingSet([e.get_assignment(target) for e in examples])
-
-        ground = self.get_world()
-
-        clauses = []
-        while any(e.positive for e in training_set.assignments):
-            clause = self.new_clause(target, training_set)
-            if not clause:
-                raise ValueError("Shouldn't have happened")
-
-            clauses.append(clause)
-            training_set = TrainingSet([a for a in training_set.assignments if not a.satisfy(target, ground)])
-
-        return clauses
-
-    def new_clause(self, target: Literal, training_set: TrainingSet) -> Clause:
-        body, current_set = [], training_set
-        while any(not e.positive for e in current_set.assignments):
-            candidates = self.new_literals(target, body)
-            literal, extended_examples = self.choose_literal(candidates, current_set)
-            if literal:
-                body = (*body, literal)
-                current_set = extended_examples
-
-        return Clause(target, body)
-
-    def choose_literal(self, literals: List[Literal], training_set: TrainingSet) -> Tuple[Literal, List[Example]]:
-        best, literal, extended_examples = None, None, training_set
-        for literal in literals:
-            max_gain = cover(extended_examples, literal) * information(extended_examples)
-            if best is not None and max_gain < best:
-                continue
-
-            # future_examples = []
-            # for example in extended_examples:
-            #     for e in example.extend(literal, self.get_constants()):
-            #         if e not in future_examples:
-            #             future_examples.append(e)
-
-            future_examples = [ee for e in extended_examples for ee in e.extend(literal, self.get_constants())]
-            gain = cover(examples, literal) * (information(examples) - information(future_examples))
-            if best is None or gain > best:
-                best, literal, extended_examples = gain, literal, future_examples
-
-        return literal, extended_examples
-
-    def new_literals(self, head: Literal, body: List[Literal]) -> List[Literal]:
-        literals = []
-        count = self._count(head, body)
-        for negated, functor, arity in self._get_signatures():
-            for indexes in self._get_indexes(count, arity):
-                literal = Literal(Atom(functor, tuple('V%d' % i for i in indexes)), negated)
-                if literal not in literals:
-                    literals.append(literal)
-
-        return literals
-
-    def extend(self, example: Example, literal: Literal) -> List[Example]:
-        raise NotImplementedError
+    # def foil(self, target: Literal, examples: List[Example]) -> List[Clause]:
+    #     training_set = TrainingSet([e.get_assignment(target) for e in examples])
+    #
+    #     ground = self.get_world()
+    #
+    #     clauses = []
+    #     while any(e.positive for e in training_set.assignments):
+    #         clause = self.new_clause(target, training_set)
+    #         if not clause:
+    #             raise ValueError("Shouldn't have happened")
+    #
+    #         clauses.append(clause)
+    #         training_set = TrainingSet([a for a in training_set.assignments if not a.satisfy(target, ground)])
+    #
+    #     return clauses
+    #
+    # def new_clause(self, target: Literal, training_set: TrainingSet) -> Clause:
+    #     body, current_set = [], training_set
+    #     while any(not e.positive for e in current_set.assignments):
+    #         candidates = self.new_literals(target, body)
+    #         literal, extended_examples = self.choose_literal(candidates, current_set)
+    #         if literal:
+    #             body = (*body, literal)
+    #             current_set = extended_examples
+    #
+    #     return Clause(target, body)
+    #
+    # def choose_literal(self, literals: List[Literal], training_set: TrainingSet) -> Tuple[Literal, List[Example]]:
+    #     best, literal, extended_examples = None, None, training_set
+    #     for literal in literals:
+    #         max_gain = cover(extended_examples, literal) * information(extended_examples)
+    #         if best is not None and max_gain < best:
+    #             continue
+    #
+    #         # future_examples = []
+    #         # for example in extended_examples:
+    #         #     for e in example.extend(literal, self.get_constants()):
+    #         #         if e not in future_examples:
+    #         #             future_examples.append(e)
+    #
+    #         future_examples = [ee for e in extended_examples for ee in e.extend(literal, self.get_constants())]
+    #         gain = cover(examples, literal) * (information(examples) - information(future_examples))
+    #         if best is None or gain > best:
+    #             best, literal, extended_examples = gain, literal, future_examples
+    #
+    #     return literal, extended_examples
+    #
+    # def new_literals(self, head: Literal, body: List[Literal]) -> List[Literal]:
+    #     literals = []
+    #     count = self._count(head, body)
+    #     for negated, functor, arity in self._get_signatures():
+    #         for indexes in self._get_indexes(count, arity):
+    #             literal = Literal(Atom(functor, tuple('V%d' % i for i in indexes)), negated)
+    #             if literal not in literals:
+    #                 literals.append(literal)
+    #
+    #     return literals
+    #
+    # def extend(self, example: Example, literal: Literal) -> List[Example]:
+    #     raise NotImplementedError
 
     # def extend(self, literal: Literal, ground: List[Literal]) -> Tuple[int, List[Assignment]]:
     #     count, result = 0, []
@@ -188,54 +187,40 @@ class TrainingSet:
     #
     #     return count, result
 
-    def _get_signatures(self) -> List[Tuple[bool, str, int]]:
-        signatures = []
-        for clause in self._clauses:
-            signature = (clause.head.negated, clause.head.functor, clause.head.get_arity())
-            if signature not in signatures:
-                signatures.append(signature)
 
-        return signatures
-
-    @staticmethod
-    def _count(head: Literal, body: List[Literal]) -> int:
-        indexes = {}
-        for literal in [*body, head]:
-            for term in literal.terms:
-                if is_variable(term):
-                    indexes.setdefault(term, len(indexes))
-
-        return len(indexes)
-
-    @staticmethod
-    def _get_indexes(count: int, arity: int) -> List[List[int]]:
-        items = [[]]
-        for _ in range(arity):
-            updates = []
-            for combination in items:
-                for current in range(count + arity - 1):
-                    update = [*combination, current]
-                    updates.append(update)
-            items = updates
-        valid_items = [p for p in items if any(i < count for i in p)]
-
-        return sorted(valid_items, key=lambda x: sum(1 for i in x if i < count))
+# def _get_signatures(self) -> List[Tuple[bool, str, int]]:
+#     signatures = []
+#     for clause in self._clauses:
+#         signature = (clause.head.negated, clause.head.functor, clause.head.get_arity())
+#         if signature not in signatures:
+#             signatures.append(signature)
+#
+#     return signatures
 
 
-def cover(examples: List[Example], literal: Literal) -> int:
-    return sum(1 for e in examples if e.is_covered(literal))
+def _count(head: Literal, body: List[Literal]) -> int:
+    indexes = {}
+    for literal in [*body, head]:
+        for term in literal.terms:
+            if is_variable(term):
+                indexes.setdefault(term, len(indexes))
+
+    return len(indexes)
 
 
-def max_gain(examples: List[Example], literal: Literal) -> float:
-    return cover(examples, literal) * information(examples)
+def _get_indexes(count: int, arity: int) -> List[List[int]]:
+    items = [[]]
+    for _ in range(arity):
+        updates = []
+        for combination in items:
+            for current in range(count + arity - 1):
+                update = [*combination, current]
+                updates.append(update)
+        items = updates
+    valid_items = [p for p in items if any(i < count for i in p)]
+
+    return sorted(valid_items, key=lambda x: sum(1 for i in x if i < count))
 
 
-def information(examples: List[Example]) -> float:
-    if not examples:
-        return -inf
-
-    pos = sum(1 for e in examples if e.positive)
-    if pos == 0:
-        return inf
-
-    return -log(pos / len(examples))  # / log(2)
+if __name__ == '__main__':
+    print(_get_indexes(2, 2))
