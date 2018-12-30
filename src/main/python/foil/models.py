@@ -261,7 +261,9 @@ class Program:
         return self._clauses[index] if 0 <= index < len(self._clauses) else None
 
     def get_constants(self) -> List[Term]:
-        return sorted({t for c in self._clauses for l in c.literals for t in l.terms if not is_variable(t)})
+        constants = {t for c in self._clauses for l in c.literals for t in l.terms if is_ground(t)}
+
+        return sorted(constants, key=lambda x: str(repr(x)))
 
     def get_facts(self) -> Iterable[Clause]:
         return [c for c in self._clauses if c.is_fact()]

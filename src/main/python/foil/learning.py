@@ -1,4 +1,5 @@
 from enum import Enum
+from itertools import permutations
 from typing import Dict
 from typing import Iterable
 from typing import List
@@ -7,6 +8,8 @@ from typing import Optional
 from foil.models import Clause
 from foil.models import Literal
 from foil.models import Program
+from foil.unification import is_ground
+from foil.unification import is_variable
 from foil.unification import normalize
 from foil.unification import Term
 from foil.unification import Value
@@ -21,7 +24,9 @@ class Label(Enum):
 
 
 class Example:
+    # TODO Add parse
     def __init__(self, assignment: Assignment, label: Label = Label.POSITIVE):
+        # TODO Check that assignment is correct?
         self._assignment = assignment
         self._label = label
 
@@ -60,6 +65,7 @@ class Example:
 
 
 class Target:
+    # TODO Add parse
     def __init__(self, relation: Literal, examples: List[Example] = None):
         self._relation = relation
         self._examples = examples or []
@@ -97,9 +103,21 @@ class Target:
     def examples(self) -> Iterable[Example]:
         return self._examples
 
+    def get_constants(self) -> List[Term]:
+        constants = {t for t in self._relation.terms if is_ground(t)}
+        for example in self._examples:
+            constants.update(example.assignment.values())
+
+        return sorted(constants, key=lambda x: str(repr(x)))
+
+    def get_variables(self) -> List[Variable]:
+        variables = {v for v in self._relation.terms if is_variable(v)}
+
+        return sorted(variables)
+
 
 class Problem:
-
+    # TODO Add parse
     def __init__(self, target: Target, program: Program):
         self._target = target
         self._program = program
@@ -138,7 +156,10 @@ class Problem:
         return self._program.get_clause(index)
 
     def get_constants(self) -> List[Term]:
-        return self._program.get_constants()
+        constants = set(self._target.get_constants())
+        constants.update(self._program.get_constants())
+
+        return sorted(constants, key=lambda x: str(repr(x)))
 
     def get_facts(self) -> Iterable[Clause]:
         return self._program.get_facts()
@@ -149,13 +170,29 @@ class Problem:
     def is_ground(self) -> bool:
         return self._program.is_ground()
 
+    def complete(self) -> List[Example]:
+        variables = self._target.get_variables()
+        constants = self.get_constants() * len(variables)
+
+        examples = set()
+        for values in permutations(constants, len(variables)):
+            assignment = dict(zip(variables, values))
+            if Example(assignment) not in self._target.examples:
+                example = Example(assignment, Label.NEGATIVE)
+                if example not in self._target.examples:
+                    examples.add(example)
+
+        return sorted(examples, key=lambda x: repr(x))
+
 
 if __name__ == '__main__':
     e1 = Example({'A': 0, 'B': 1}, Label.POSITIVE)
     e2 = Example({'A': 2, 'B': 1}, Label.NEGATIVE)
-    t = Target(Literal.parse('pred(A, B)'), [e1, e2])
+    t = Target(Literal.parse('pred(A, B, c)'), [e1, e2])
     p = Problem(t, Program())
     print(p)
-
+    print(t.get_variables())
+    print(p.get_constants())
+    print(p.complete())
 
     print(hash(e1), hash(e2))
