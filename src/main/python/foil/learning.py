@@ -199,7 +199,7 @@ class Problem:
 
 def covers(background: Theory, hypothesis: Theory, relation: Literal, examples: List[Example]) -> List[Example]:
     program = Program(list({*background, *hypothesis}))
-    world = program.get_world()
+    world = program.ground()
 
     covered = []
     for example in examples:

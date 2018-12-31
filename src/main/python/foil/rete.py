@@ -6,6 +6,7 @@ from typing import Union
 
 from foil.models import Clause
 from foil.models import Literal
+from foil.models import Program
 from foil.unification import Substitution
 
 Payload = Tuple[List[Literal], Substitution]
@@ -141,3 +142,25 @@ class Engine:
             raise ValueError('Not a ground fact: %s' % fact)
 
         self._root.notify(fact.head)
+
+
+_tabling = {}
+
+
+def ground(program: Program, cache: bool = True) -> List[Literal]:
+    global _tabling
+
+    if cache and program in _tabling:
+        return _tabling[program]
+
+    engine = Engine()
+    for clause in program.clauses:
+        engine.load(clause)
+
+    for fact in program.get_facts():
+        engine.insert(fact)
+
+    if not cache:
+        return list(engine.facts)
+
+    return _tabling.setdefault(program, list(engine.facts))

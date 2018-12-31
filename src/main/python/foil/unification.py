@@ -5,6 +5,9 @@ from typing import List
 from typing import Optional
 from typing import Union
 
+from foil.models import Literal
+from foil.models import Program
+
 Value = Union[bool, float, int, str]
 Variable = str
 Term = Union[Value, Variable]
@@ -92,3 +95,43 @@ def simplify(subst: Substitution) -> Optional[Substitution]:
                 result[var] = term
 
     return result
+
+
+_tabling = {}
+
+
+def resolve(program: Program, query: Literal, cache: bool = True) -> Optional[Derivation]:
+    global _tabling
+
+    if cache and program in _tabling and query in _tabling[program]:
+        return _tabling[program][query]
+
+    derivation = _resolve(program, query, cache)
+
+    if not cache:
+        return derivation
+
+    return _tabling.setdefault(program, {}).setdefault(query, derivation)
+
+
+def _resolve(program: Program, query: Literal, cache: bool) -> Optional[Derivation]:
+    for i, clause in enumerate(program.clauses):
+        substitution = clause.head.unify(query)
+        if substitution is None:
+            continue
+
+        derivation = [Step(i, query, substitution)]
+        if not clause.body:
+            return derivation
+
+        for query in clause.body:
+            substituted = query.substitute(substitution)
+            sub_goal = resolve(program, substituted, cache)
+            if not sub_goal:
+                return None
+
+            derivation = [*derivation, *sub_goal]
+
+        return derivation
+
+    return None

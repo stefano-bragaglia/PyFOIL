@@ -1,3 +1,5 @@
+from enum import Enum
+from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Optional
@@ -11,10 +13,11 @@ from foil.unification import is_ground
 from foil.unification import is_variable
 from foil.unification import normalize
 from foil.unification import simplify
-from foil.unification import Step
 from foil.unification import Substitution
 from foil.unification import Term
 from foil.unification import unify
+from foil.unification import Value
+from foil.unification import Variable
 
 
 class Mask:
@@ -59,6 +62,7 @@ class Mask:
 
 
 class Atom:
+
     @staticmethod
     def parse(content: str) -> 'Atom':
         from foil.language.grammar import atom
@@ -136,6 +140,7 @@ class Atom:
 
 
 class Literal:
+
     @staticmethod
     def parse(content: str) -> 'Literal':
         from foil.language.grammar import literal
@@ -205,6 +210,7 @@ class Literal:
 
 
 class Clause:
+
     @staticmethod
     def parse(content: str) -> 'Clause':
         from foil.language.grammar import clause
@@ -259,7 +265,7 @@ class Clause:
         return len(self._body)
 
     def is_fact(self) -> bool:
-        return not self._body
+        return not self._body and self._head.is_ground()
 
     def is_ground(self) -> bool:
         return all(l.is_ground() for l in self.literals)
@@ -269,6 +275,7 @@ class Clause:
 
 
 class Program:
+
     @staticmethod
     def parse(content: str) -> 'Program':
         from foil.language.grammar import program
@@ -280,7 +287,6 @@ class Program:
 
     def __init__(self, clauses: List[Clause] = None):
         self._clauses = clauses or []
-        self._tabling = {}
 
     def __hash__(self) -> int:
         return hash(tuple(self._clauses))
@@ -304,13 +310,8 @@ class Program:
     def get_clause(self, index: int) -> Optional[Clause]:
         return self._clauses[index] if 0 <= index < len(self._clauses) else None
 
-    def get_constants(self) -> List[Term]:
-        constants = {t for c in self._clauses for l in c.literals for t in l.terms if is_ground(t)}
-
-        return sorted(constants, key=lambda x: str(repr(x)))
-
     def get_facts(self) -> Iterable[Clause]:
-        return [c for c in self._clauses if c.is_fact() and c.is_ground()]
+        return [c for c in self._clauses if c.is_fact()]
 
     def get_rules(self) -> Iterable[Clause]:
         return (c for c in self._clauses if not c.is_fact())
@@ -325,40 +326,161 @@ class Program:
         if not query.is_ground():
             raise ValueError("'query' must be ground: %s" % query)
 
-        return self._tabling.setdefault(query, self._resolve(query))
+        from foil.unification import resolve
 
-    def _resolve(self, query: Literal) -> Optional[Derivation]:
-        for i, clause in enumerate(self._clauses):
-            substitution = clause.head.unify(query)
-            if substitution is None:
-                continue
+        return resolve(self, query)
 
-            derivation = [Step(i, query, substitution)]
-            if not clause.body:
-                return derivation
+    def ground(self) -> List[Literal]:
+        from foil.rete import ground
 
-            for query in clause.body:
-                substituted = query.substitute(substitution)
-                sub_goal = self.resolve(substituted)
-                if not sub_goal:
-                    return None
+        return ground(self)
 
-                derivation = [*derivation, *sub_goal]
 
-            return derivation
+class Label(Enum):
+    NEGATIVE = '-'
+    POSITIVE = '+'
 
-        return None
 
-    def get_world(self) -> List[Literal]:
-        return self._tabling.setdefault(None, self._get_world())
+Assignment = Dict[Variable, Value]
 
-    def _get_world(self) -> List[Literal]:
-        from foil.rete import Engine
 
-        engine = Engine()
-        for clause in self._clauses:
-            engine.load(clause)
-        for fact in self.get_facts():
-            engine.insert(fact)
+class Example:
 
-        return list(engine.facts)
+    # TODO Add parse
+
+    def __init__(self, assignment: Assignment, label: Label = Label.POSITIVE):
+        # TODO Check that assignment is correct?
+        self._assignment = assignment
+        self._label = label
+
+    def __hash__(self) -> int:
+        return hash((*self._assignment.items(), self._label))
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Example):
+            return False
+
+        if self._label != other._label:
+            return False
+
+        return self._assignment == other._assignment
+
+    def __repr__(self) -> str:
+        return '<%s>(%s)' % (
+            ', '.join('%s=%s' % (normalize(v), normalize(t)) for v, t in sorted(self._assignment.items())),
+            self._label.value
+        )
+
+    @property
+    def label(self) -> Label:
+        return self._label
+
+    @property
+    def assignment(self) -> Assignment:
+        return self._assignment
+
+    @property
+    def variables(self) -> Iterable[Variable]:
+        return self._assignment.keys()
+
+    def get_value(self, variable: Variable) -> Optional[Value]:
+        return self._assignment.get(variable)
+
+
+class Problem:
+
+    # TODO Add parse
+
+    def __init__(self, program: Program, target: Literal, examples: List[Example] = None):
+        self._program = program
+        self._target = target
+        self._positives = [e for e in examples or [] if e.label if Label.POSITIVE]
+        self._negatives = [e for e in examples or [] if e.label if Label.NEGATIVE]
+
+    def __hash__(self) -> int:
+        return hash((self._target, self._program))
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Problem):
+            return False
+
+        if self._target != other._target:
+            return False
+
+        return self._program == other._program
+
+    def __repr__(self) -> str:
+        if self._program.is_empty():
+            return repr(self._target)
+
+        return '%s\n\n%s' % (repr(self._target), repr(self._program))
+
+    @property
+    def clauses(self) -> Iterable[Clause]:
+        return self._program.clauses
+
+    @property
+    def target(self) -> Literal:
+        return self._target
+
+    @property
+    def examples(self) -> Iterable[Example]:
+        return [*self._positives, *self._negatives]
+
+    @property
+    def positives(self) -> Iterable[Example]:
+        return self._positives
+
+    @property
+    def negatives(self) -> Iterable[Example]:
+        return self._negatives
+
+    @property
+    def program(self) -> Program:
+        return self._program
+
+    def get_clause(self, index: int) -> Optional[Clause]:
+        return self._program.get_clause(index)
+
+    def get_facts(self) -> Iterable[Clause]:
+        return self._program.get_facts()
+
+    def get_rules(self) -> Iterable[Clause]:
+        return self._program.get_rules()
+
+    def is_empty(self) -> bool:
+        return self._program.is_empty()
+
+    def is_ground(self) -> bool:
+        return self._program.is_ground()
+
+    def complete(self):
+        from foil.coverage import closure
+
+        examples = closure(self._get_variables(), self._get_constants(), [*self._positives, *self._negatives])
+        self._positives = [e for e in examples if e.label is Label.POSITIVE]
+        self._negatives = [e for e in examples if e.label is Label.NEGATIVE]
+
+    def resolve(self, query: Literal) -> Optional[Derivation]:
+        return self._program.resolve(query)
+
+    def ground(self) -> List[Literal]:
+        return self._program.ground()
+
+    def _get_constants(self) -> List[Term]:
+        constants = {t for c in self._program.clauses for l in c.literals for t in l.terms if is_ground(t)}
+        constants.update({t for t in self._target.terms if is_ground(t)})
+
+        return sorted(constants, key=lambda x: str(repr(x)))
+
+    def _get_masks(self) -> List[Mask]:
+        masks = []
+        for literal in [*[c.head for c in self._program.clauses], self._target]:
+            mask = literal.get_mask()
+            if mask not in masks:
+                masks.append(mask)
+
+        return masks
+
+    def _get_variables(self) -> List[Variable]:
+        return sorted({v for v in self._target.terms if is_variable(v)})

@@ -1,5 +1,6 @@
 import math
 from itertools import combinations
+from itertools import permutations
 from typing import List
 from typing import Optional
 from typing import Set
@@ -13,6 +14,7 @@ from foil.models import Literal
 from foil.models import Mask
 from foil.models import Program
 from foil.unification import is_variable
+from foil.unification import Value
 from foil.unification import Variable
 
 
@@ -50,6 +52,20 @@ class Expand:
             terms = (*terms, table[index])
 
         return terms
+
+
+def closure(variables: List[Variable], constants: List[Value], examples: List[Example]) -> List[Example]:
+    values = constants * len(variables)
+    for values in permutations(values, len(variables)):
+        assignment = dict(zip(variables, values))
+        if Example(assignment) in examples:
+            continue
+
+        example = Example(assignment, Label.NEGATIVE)
+        if example not in examples:
+            examples.append(example)
+
+    return sorted(examples, key=lambda x: repr((x.label, *[(k, v) for k, v in sorted(x.assignment.items())])))
 
 
 def foil(
@@ -128,7 +144,7 @@ def uncovers(
         examples: List[Example],
 ) -> List[Example]:
     program = Program(list({*background, *hypothesis, Clause(target, body)}))
-    world = program.get_world()
+    world = program.ground()
 
     uncovered = []
     for example in examples:

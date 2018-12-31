@@ -7,6 +7,7 @@ from foil.models import Literal
 from foil.rete import Alpha
 from foil.rete import Beta
 from foil.rete import Engine
+from foil.rete import ground
 from foil.rete import Leaf
 from foil.rete import Root
 
@@ -86,3 +87,14 @@ class EngineTest(TestCase):
                 result = engine.insert(fact)
 
                 assert_that(result, 'Engine.insert').is_equal_to(expected)
+
+
+class ReteTest(TestCase):
+
+    def test__ground(self):
+        for i, entry in enumerate([]):  # TODO
+            problem, cache, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = ground(problem, cache)
+
+                assert_that(result, 'ground').is_equal_to(expected)

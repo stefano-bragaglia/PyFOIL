@@ -5,6 +5,11 @@ from assertpy import assert_that
 from foil.models import Atom
 from foil.models import Clause
 from foil.models import Literal
+from foil.models import Mask
+
+
+class MaskTest(TestCase):  # TODO
+    pass
 
 
 class AtomTest(TestCase):
@@ -111,6 +116,7 @@ class AtomTest(TestCase):
 
 
 class LiteralTest(TestCase):
+
     def test__parse(self):
         for i, entry in enumerate([
             ('func', Literal(Atom('func'))),
@@ -118,24 +124,28 @@ class LiteralTest(TestCase):
             ('func(term)', Literal(Atom('func', ['term']))),
             ('func(term, 5.0)', Literal(Atom('func', ['term', 5.0]))),
             ('func(term, 5.0, True)', Literal(Atom('func', ['term', 5.0, True]))),
+            ('func(term, 5.0, True, X)', Literal(Atom('func', ['term', 5.0, True, 'X']))),
 
             ('~func', Literal(Atom('func'), True)),
             ('~func()', Literal(Atom('func', []), True)),
             ('~func(term)', Literal(Atom('func', ['term']), True)),
             ('~func(term, 5.0)', Literal(Atom('func', ['term', 5.0]), True)),
             ('~func(term, 5.0, True)', Literal(Atom('func', ['term', 5.0, True]), True)),
+            ('~func(term, 5.0, True, X)', Literal(Atom('func', ['term', 5.0, True, 'X']), True)),
 
             ('~~func', Literal(Atom('func'))),
             ('~~func()', Literal(Atom('func', []))),
             ('~~func(term)', Literal(Atom('func', ['term']))),
             ('~~func(term, 5.0)', Literal(Atom('func', ['term', 5.0]))),
             ('~~func(term, 5.0, True)', Literal(Atom('func', ['term', 5.0, True]))),
+            ('~~func(term, 5.0, True, X)', Literal(Atom('func', ['term', 5.0, True, 'X']))),
 
             ('~~~func', Literal(Atom('func'), True)),
             ('~~~func()', Literal(Atom('func', []), True)),
             ('~~~func(term)', Literal(Atom('func', ['term']), True)),
             ('~~~func(term, 5.0)', Literal(Atom('func', ['term', 5.0]), True)),
             ('~~~func(term, 5.0, True)', Literal(Atom('func', ['term', 5.0, True]), True)),
+            ('~~~func(term, 5.0, True, X)', Literal(Atom('func', ['term', 5.0, True, 'X']), True)),
         ]):
             content, expected = entry
             with self.subTest(i=i, value=entry):
@@ -161,6 +171,50 @@ class LiteralTest(TestCase):
                 result = atom.get_arity()
 
                 assert_that(result, 'Literal.get_arity').is_equal_to(expected)
+
+    def test__get_complement(self):
+        for i, entry in enumerate([
+            (Literal.parse('func'), Literal.parse('~func')),
+            (Literal.parse('func()'), Literal.parse('~func()')),
+            (Literal.parse('func(term)'), Literal.parse('~func(term)')),
+            (Literal.parse('func(term, 5.0)'), Literal.parse('~func(term, 5.0)')),
+            (Literal.parse('func(term, 5.0, True)'), Literal.parse('~func(term, 5.0, True)')),
+            (Literal.parse('func(term, 5.0, True, X)'), Literal.parse('~func(term, 5.0, True, X)')),
+
+            (Literal.parse('~func'), Literal.parse('func')),
+            (Literal.parse('~func()'), Literal.parse('func()')),
+            (Literal.parse('~func(term)'), Literal.parse('func(term)')),
+            (Literal.parse('~func(term, 5.0)'), Literal.parse('func(term, 5.0)')),
+            (Literal.parse('~func(term, 5.0, True)'), Literal.parse('func(term, 5.0, True)')),
+            (Literal.parse('~func(term, 5.0, True, X)'), Literal.parse('func(term, 5.0, True, X)')),
+        ]):
+            literal, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = literal.get_complement()
+
+                assert_that(result, 'Literal.get_complement').is_equal_to(expected)
+
+    def test__get_mask(self):
+        for i, entry in enumerate([
+            (Literal.parse('func'), Mask(False, 'func', 0)),
+            (Literal.parse('func()'), Mask(False, 'func', 0)),
+            (Literal.parse('func(term)'), Mask(False, 'func', 1)),
+            (Literal.parse('func(term, 5.0)'), Mask(False, 'func', 2)),
+            (Literal.parse('func(term, 5.0, True)'), Mask(False, 'func', 3)),
+            (Literal.parse('func(term, 5.0, True, X)'), Mask(False, 'func', 4)),
+
+            (Literal.parse('~func'), Mask(True, 'func', 0)),
+            (Literal.parse('~func()'), Mask(True, 'func', 0)),
+            (Literal.parse('~func(term)'), Mask(True, 'func', 1)),
+            (Literal.parse('~func(term, 5.0)'), Mask(True, 'func', 2)),
+            (Literal.parse('~func(term, 5.0, True)'), Mask(True, 'func', 3)),
+            (Literal.parse('~func(term, 5.0, True, X)'), Mask(True, 'func', 4)),
+        ]):
+            literal, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = literal.get_mask()
+
+                assert_that(result, 'Literal.get_mask').is_equal_to(expected)
 
     def test__is_ground(self):
         for i, entry in enumerate([
@@ -361,6 +415,7 @@ class LiteralTest(TestCase):
 
 
 class ClauseTest(TestCase):
+
     def test__parse(self):
         for i, entry in enumerate([
             ('func.', Clause(Literal(Atom('func')))),
@@ -450,13 +505,13 @@ class ClauseTest(TestCase):
         for i, entry in enumerate([
             (Clause.parse('func.'), True),
             (Clause.parse('func().'), True),
-            (Clause.parse('func(Var).'), True),
+            (Clause.parse('func(Var).'), False),
             (Clause.parse('func(term).'), True),
             (Clause.parse('func(term, 5.0).'), True),
             (Clause.parse('func(term, 5.0, True).'), True),
             (Clause.parse('~func.'), True),
             (Clause.parse('~func().'), True),
-            (Clause.parse('~func(Var).'), True),
+            (Clause.parse('~func(Var).'), False),
             (Clause.parse('~func(term).'), True),
             (Clause.parse('~func(term, 5.0).'), True),
             (Clause.parse('~func(term, 5.0, True).'), True),
@@ -591,28 +646,79 @@ class ClauseTest(TestCase):
 
 
 class ProgramTest(TestCase):
-    def test__get_clause(self):
+
+    def test__parse(self):  # TODO
         pass
 
-    def test__get_constants(self):
+    def test__get_clause(self):  # TODO
         pass
 
-    def test__get_facts(self):
+    def test__get_facts(self):  # TODO
         pass
 
-    def test__get_rules(self):
+    def test__get_rules(self):  # TODO
         pass
 
-    def test__is_ground(self):
+    def test__is_empty(self):  # TODO
         pass
 
-    def test__resolve(self):
+    def test__is_ground(self):  # TODO
         pass
 
-    def test__get_world(self):
+    def test__resolve(self):  # TODO
+        pass
+
+    def test__ground(self):  # TODO
         pass
 
 
+class LabelTest(TestCase):  # TODO
+    pass
 
 
+class ExampleTest(TestCase):
 
+    def test__parse(self):  # TODO
+        pass
+
+    def test__get_clause(self):  # TODO
+        pass
+
+
+class ProblemTest(TestCase):
+
+    def test__parse(self):  # TODO
+        pass
+
+    def test__get_clause(self):  # TODO
+        pass
+
+    def test__get_facts(self):  # TODO
+        pass
+
+    def test__get_rules(self):  # TODO
+        pass
+
+    def test__is_empty(self):  # TODO
+        pass
+
+    def test__is_ground(self):  # TODO
+        pass
+
+    def test__complete(self):  # TODO
+        pass
+
+    def test__resolve(self):  # TODO
+        pass
+
+    def test__ground(self):  # TODO
+        pass
+
+    def test___get_constants(self):  # TODO
+        pass
+
+    def test___get_masks(self):  # TODO
+        pass
+
+    def test___get_variables(self):  # TODO
+        pass
