@@ -458,13 +458,14 @@ class Problem:
         from foil.foil import closure
 
         variables = sorted({v for v in self._target.terms if is_variable(v)})
-        constants = sorted({
-            *{t for t in self._target.terms if is_ground(t)},
-            *{t for c in self._program.clauses for l in c.literals for t in l.terms if is_ground(t)},
-        }, key=lambda x: repr(x))
-        examples = closure(variables, constants, [*self._positives, *self._negatives])
-        self._positives = [e for e in examples if e.label is Label.POSITIVE]
-        self._negatives = [e for e in examples if e.label is Label.NEGATIVE]
+        constants = {t for c in self._program.clauses for l in c.literals for t in l.terms if is_ground(t)}
+        constants.update({t for t in self._target.terms if is_ground(t)})
+        constants = sorted(constants, key=lambda x: str(repr(x)))
+        examples = [*self._positives, *self._negatives]
+
+        completion = closure(variables, constants, examples)
+        self._positives = [e for e in completion if e.label is Label.POSITIVE]
+        self._negatives = [e for e in completion if e.label is Label.NEGATIVE]
 
     def resolve(self, query: Literal) -> Optional[Derivation]:
         return self._program.resolve(query)

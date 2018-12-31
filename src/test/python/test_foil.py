@@ -57,10 +57,10 @@ class FoilTest(TestCase):
 
                 assert_that(
                     result,
-                    'build(background: List[Clause], hypothesis: List[Clause], '
-                    '      target: Literal, masks: List[Mask], '
-                    '      positives: List[Example], negatives: List[Example]'
-                    ') -> Tuple[Clause, List[Example], List[Example]]:'
+                    'build(background: Iterable[Clause], hypothesis: Iterable[Clause], '
+                    '      target: Literal, masks: Iterable[Mask], '
+                    '      positives: Iterable[Example], negatives: Iterable[Example]'
+                    ') -> Tuple[Clause, Iterable[Example], Iterable[Example]]:'
                 ).is_equal_to(expected)
 
     def test__choose(self):
@@ -73,10 +73,10 @@ class FoilTest(TestCase):
 
                 assert_that(
                     result,
-                    'choose(background: List[Clause], hypothesis: List[Clause], '
-                    '       target: Literal, body: List[Literal], masks: List[Mask], '
-                    '       positives: List[Example], negatives: List[Example]'
-                    ') -> Optional[Tuple[Literal, List[Example], List[Example]]]:'
+                    'choose(background: Iterable[Clause], hypothesis: Iterable[Clause], '
+                    '       target: Literal, body: Iterable[Literal], masks: Iterable[Mask], '
+                    '       positives: Iterable[Example], negatives: Iterable[Example]'
+                    ') -> Optional[Tuple[Literal, Iterable[Example], Iterable[Example]]]:'
                 ).is_equal_to(expected)
 
     def test__covers(self):
@@ -89,10 +89,10 @@ class FoilTest(TestCase):
 
                 assert_that(
                     result,
-                    'covers(background: List[Clause], hypothesis: List[Clause],'
-                    '       target: Literal, body: List[Literal],'
-                    '       examples: List[Example]'
-                    ') -> List[Example]:'
+                    'covers(background: Iterable[Clause], hypothesis: Iterable[Clause],'
+                    '       target: Literal, body: Iterable[Literal],'
+                    '       examples: Iterable[Example]'
+                    ') -> Iterable[Example]:'
                 ).is_equal_to(expected)
 
     def test__gain(self):
@@ -105,8 +105,8 @@ class FoilTest(TestCase):
 
                 assert_that(
                     result,
-                    'gain(positives: List[Example], negatives: List[Example],'
-                    '     positives_i: List[Example], negatives_i: List[Example]'
+                    'gain(positives: Iterable[Example], negatives: Iterable[Example],'
+                    '     positives_i: Iterable[Example], negatives_i: Iterable[Example]'
                     ') -> float:'
                 ).is_equal_to(expected)
 
@@ -120,7 +120,7 @@ class FoilTest(TestCase):
 
                 assert_that(
                     result,
-                    'max_gain(positives: List[Example], negatives: List[Example], positives_i: List[Example]) -> float:'
+                    'max_gain(positives: Iterable[Example], negatives: Iterable[Example], positives_i: Iterable[Example]) -> float:'
                 ).is_equal_to(expected)
 
     def test__common(self):
@@ -133,7 +133,7 @@ class FoilTest(TestCase):
 
                 assert_that(
                     result,
-                    'common(positives: List[Example], positives_i: List[Example]) -> int:'
+                    'common(positives: Iterable[Example], positives_i: Iterable[Example]) -> int:'
                 ).is_equal_to(expected)
 
     def test__entropy(self):
@@ -146,5 +146,5 @@ class FoilTest(TestCase):
 
                 assert_that(
                     result,
-                    'entropy(positives: List[Example], negatives: List[Example]) -> float:'
+                    'entropy(positives: Iterable[Example], negatives: Iterable[Example]) -> float:'
                 ).is_equal_to(expected)
