@@ -15,8 +15,6 @@ from foil.models import Program
 from foil.unification import is_variable
 from foil.unification import Variable
 
-Theory = List[Clause]
-
 
 class Expand:
     _tabling = {}
@@ -55,12 +53,12 @@ class Expand:
 
 
 def foil(
-        background: Theory,
+        background: List[Clause],
         target: Literal,
         masks: List[Mask],
         positives: List[Example],
         negatives: List[Example],
-) -> Theory:
+) -> List[Clause]:
     hypothesis = []
     while positives:
         clause, positives, negatives = learn(background, hypothesis, target, masks, positives, negatives)
@@ -70,8 +68,8 @@ def foil(
 
 
 def learn(
-        background: Theory,
-        hypothesis: Theory,
+        background: List[Clause],
+        hypothesis: List[Clause],
         target: Literal,
         masks: List[Mask],
         positives: List[Example],
@@ -90,8 +88,8 @@ def learn(
 
 
 def choose(
-        background: Theory,
-        hypothesis: Theory,
+        background: List[Clause],
+        hypothesis: List[Clause],
         target: Literal,
         body: List[Literal],
         masks: List[Mask],
@@ -112,7 +110,8 @@ def choose(
                 negatives_i = uncovers(background, hypothesis, target, [*body, candidate], negatives)
                 score = gain(positives, negatives, positives_i, negatives_i)
                 if best_score is None or score > best_score:
-                    best_score, best_candidate, best_positives, best_negatives = score, candidate, positives_i, negatives_i
+                    best_score, best_candidate, best_positives, best_negatives = \
+                        score, candidate, positives_i, negatives_i
 
     if best_score is None:
         return None
@@ -122,8 +121,8 @@ def choose(
 
 
 def uncovers(
-        background: Theory,
-        hypothesis: Theory,
+        background: List[Clause],
+        hypothesis: List[Clause],
         target: Literal,
         body: List[Literal],
         examples: List[Example],
@@ -148,8 +147,7 @@ def gain(
         new_positives: List[Example],
         new_negatives: List[Example],
 ) -> float:
-    return common(positives, new_positives) \
-           * (entropy(positives, negatives) - entropy(new_positives, new_negatives))
+    return common(positives, new_positives) * (entropy(positives, negatives) - entropy(new_positives, new_negatives))
 
 
 def max_gain(
@@ -168,7 +166,7 @@ def entropy(positives: List[Example], negatives: List[Example]) -> float:
     return -math.log2(len(positives) / (len(positives) + len(negatives)))
 
 
-def _background() -> Theory:
+def _background() -> List[Clause]:
     return [Clause(Literal(Atom('edge', t))) for t in [[0, 1], [0, 3], [1, 2], [3, 2], [3, 4],
                                                        [4, 5], [4, 6], [6, 8], [7, 6], [7, 8]]]
 

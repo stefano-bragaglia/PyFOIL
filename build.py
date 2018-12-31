@@ -34,7 +34,7 @@ def set_properties(project):
     project.set_property("coverage_verbose_output", True)  # default is False
     project.set_property("coverage_allow_non_imported_modules", False)  # default is True
     project.set_property("coverage_exceptions", [
-        "__init__",
+        "__init__", "foil.examples", "foil.examples.abstract", "foil.examples.connectedness", "foil.examples.parenthood"
     ])
     
     project.set_property("coverage_threshold_warn", 35)  # default is 70
