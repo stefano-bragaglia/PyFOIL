@@ -1,4 +1,5 @@
 import math
+from collections import Iterable
 from itertools import combinations
 from itertools import permutations
 from typing import List
@@ -6,20 +7,22 @@ from typing import Optional
 from typing import Set
 from typing import Tuple
 
-from foil.learning import Example
-from foil.learning import Label
 from foil.models import Atom
 from foil.models import Clause
+from foil.models import Example
+from foil.models import Label
 from foil.models import Literal
 from foil.models import Mask
+from foil.models import Problem
 from foil.models import Program
 from foil.unification import is_variable
 from foil.unification import Value
 from foil.unification import Variable
 
+_tabling = {}
+
 
 class Expand:
-    _tabling = {}
 
     def __init__(self, variables: Set[Variable], arity: int):
         self._variables = tuple(variables)
@@ -33,20 +36,26 @@ class Expand:
         return self
 
     def __next__(self):
+        global _tabling
+
         for combo in self._combinations:
             if any(i < len(self._variables) for i in combo):
-                signature = self._tabling.setdefault(self._variables, {}).setdefault(combo, self._as_terms(combo))
+                signature = _tabling \
+                    .setdefault(self._variables, {}) \
+                    .setdefault(self._arity, {}) \
+                    .setdefault(combo, self._as_terms(self._variables, combo))
                 if signature not in self._visited:
                     return self._visited.setdefault(signature, list(signature))
 
         raise StopIteration()
 
-    def _as_terms(self, combination: Tuple[int, ...]) -> Tuple[Variable]:
+    @staticmethod
+    def _as_terms(variables: Tuple[Variable], combination: Tuple[int, ...]) -> Tuple[Variable]:
         terms = tuple()
-        i, table = 0, {i: v for i, v in enumerate(self._variables)}
+        i, table = 0, {i: v for i, v in enumerate(variables)}
         for index in combination:
             if index not in table:
-                while ('V%d' % i) in self._variables:
+                while ('V%d' % i) in variables:
                     i += 1
                 table[index] = 'V%d' % i
             terms = (*terms, table[index])
@@ -68,28 +77,28 @@ def closure(variables: List[Variable], constants: List[Value], examples: List[Ex
     return sorted(examples, key=lambda x: repr((x.label, *[(k, v) for k, v in sorted(x.assignment.items())])))
 
 
-def foil(
-        background: List[Clause],
+def learn(
+        background: Iterable[Clause],
         target: Literal,
-        masks: List[Mask],
-        positives: List[Example],
-        negatives: List[Example],
+        masks: Iterable[Mask],
+        positives: Iterable[Example],
+        negatives: Iterable[Example],
 ) -> List[Clause]:
     hypothesis = []
     while positives:
-        clause, positives, negatives = learn(background, hypothesis, target, masks, positives, negatives)
+        clause, positives, negatives = build(background, hypothesis, target, masks, positives, negatives)
         hypothesis.append(clause)
 
     return hypothesis
 
 
-def learn(
-        background: List[Clause],
-        hypothesis: List[Clause],
+def build(
+        background: Iterable[Clause],
+        hypothesis: Iterable[Clause],
         target: Literal,
-        masks: List[Mask],
-        positives: List[Example],
-        negatives: List[Example],
+        masks: Iterable[Mask],
+        positives: Iterable[Example],
+        negatives: Iterable[Example],
 ) -> Tuple[Clause, List[Example], List[Example]]:
     body = []
     while negatives:
@@ -104,13 +113,13 @@ def learn(
 
 
 def choose(
-        background: List[Clause],
-        hypothesis: List[Clause],
+        background: Iterable[Clause],
+        hypothesis: Iterable[Clause],
         target: Literal,
-        body: List[Literal],
-        masks: List[Mask],
-        positives: List[Example],
-        negatives: List[Example],
+        body: Iterable[Literal],
+        masks: Iterable[Mask],
+        positives: Iterable[Example],
+        negatives: Iterable[Example],
 ) -> Optional[Tuple[Literal, List[Example], List[Example]]]:
     best_score, best_candidate, best_positives, best_negatives = None, None, None, None
 
@@ -119,11 +128,11 @@ def choose(
         for terms in Expand(variables, mask.arity):
             candidate = Literal(Atom(mask.functor, terms), mask.negated)
             if candidate not in body:
-                positives_i = uncovers(background, hypothesis, target, [*body, candidate], positives)
+                positives_i = covers(background, hypothesis, target, [*body, candidate], positives)
                 if best_score is not None and max_gain(positives, negatives, positives_i) < best_score:
                     continue
 
-                negatives_i = uncovers(background, hypothesis, target, [*body, candidate], negatives)
+                negatives_i = covers(background, hypothesis, target, [*body, candidate], negatives)
                 score = gain(positives, negatives, positives_i, negatives_i)
                 if best_score is None or score > best_score:
                     best_score, best_candidate, best_positives, best_negatives = \
@@ -136,14 +145,14 @@ def choose(
     return best_candidate, best_positives, best_negatives
 
 
-def uncovers(
-        background: List[Clause],
-        hypothesis: List[Clause],
+def covers(
+        background: Iterable[Clause],
+        hypothesis: Iterable[Clause],
         target: Literal,
-        body: List[Literal],
-        examples: List[Example],
+        body: Iterable[Literal],
+        examples: Iterable[Example],
 ) -> List[Example]:
-    program = Program(list({*background, *hypothesis, Clause(target, body)}))
+    program = Program(list({*background, *hypothesis, Clause(target, list(body))}))
     world = program.ground()
 
     uncovered = []
@@ -158,28 +167,42 @@ def uncovers(
 
 
 def gain(
-        positives: List[Example],
-        negatives: List[Example],
-        new_positives: List[Example],
-        new_negatives: List[Example],
+        positives: Iterable[Example],
+        negatives: Iterable[Example],
+        positives_i: Iterable[Example],
+        negatives_i: Iterable[Example],
 ) -> float:
-    return common(positives, new_positives) * (entropy(positives, negatives) - entropy(new_positives, new_negatives))
+    return common(positives, positives_i) * (entropy(positives, negatives) - entropy(positives_i, negatives_i))
 
 
 def max_gain(
-        positives: List[Example],
-        negatives: List[Example],
-        new_positives: List[Example],
+        positives: Iterable[Example],
+        negatives: Iterable[Example],
+        positives_i: Iterable[Example],
 ) -> float:
-    return common(positives, new_positives) * entropy(positives, negatives)
+    return common(positives, positives_i) * entropy(positives, negatives)
 
 
-def common(positives: List[Example], new_positives: List[Example]) -> int:
-    return sum(1 for e in new_positives if e in positives)
+def common(positives: Iterable[Example], positives_i: Iterable[Example]) -> int:
+    return sum(1 for e in positives_i if e in positives)
 
 
-def entropy(positives: List[Example], negatives: List[Example]) -> float:
-    return -math.log2(len(positives) / (len(positives) + len(negatives)))
+def entropy(positives: Iterable[Example], negatives: Iterable[Example]) -> float:
+    return -math.log2(len(list(positives)) / len([*positives, *negatives]))
+
+
+def foil(problem: Problem, cache: bool = True) -> List[Clause]:
+    global _tabling
+
+    if cache and problem in _tabling:
+        return _tabling[problem]
+
+    hypothesis = learn(problem.clauses, problem.target, problem.get_masks(), problem.positives, problem.negatives)
+
+    if not cache:
+        return hypothesis
+
+    return _tabling.setdefault(problem, hypothesis)
 
 
 def _background() -> List[Clause]:
@@ -209,7 +232,7 @@ def _negatives() -> List[Example]:
 
 
 if __name__ == '__main__':
-    result = foil(_background(), _target(), _masks(), _positives(), _negatives())
+    result = learn(_background(), _target(), _masks(), _positives(), _negatives())
     print(len(result), result)
     print()
 

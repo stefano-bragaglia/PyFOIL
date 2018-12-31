@@ -455,9 +455,14 @@ class Problem:
         return self._program.is_ground()
 
     def complete(self):
-        from foil.coverage import closure
+        from foil.foil import closure
 
-        examples = closure(self._get_variables(), self._get_constants(), [*self._positives, *self._negatives])
+        variables = sorted({v for v in self._target.terms if is_variable(v)})
+        constants = sorted({
+            *{t for t in self._target.terms if is_ground(t)},
+            *{t for c in self._program.clauses for l in c.literals for t in l.terms if is_ground(t)},
+        }, key=lambda x: repr(x))
+        examples = closure(variables, constants, [*self._positives, *self._negatives])
         self._positives = [e for e in examples if e.label is Label.POSITIVE]
         self._negatives = [e for e in examples if e.label is Label.NEGATIVE]
 
@@ -467,13 +472,7 @@ class Problem:
     def ground(self) -> List[Literal]:
         return self._program.ground()
 
-    def _get_constants(self) -> List[Term]:
-        constants = {t for c in self._program.clauses for l in c.literals for t in l.terms if is_ground(t)}
-        constants.update({t for t in self._target.terms if is_ground(t)})
-
-        return sorted(constants, key=lambda x: str(repr(x)))
-
-    def _get_masks(self) -> List[Mask]:
+    def get_masks(self) -> List[Mask]:
         masks = []
         for literal in [*[c.head for c in self._program.clauses], self._target]:
             mask = literal.get_mask()
@@ -481,6 +480,3 @@ class Problem:
                 masks.append(mask)
 
         return masks
-
-    def _get_variables(self) -> List[Variable]:
-        return sorted({v for v in self._target.terms if is_variable(v)})

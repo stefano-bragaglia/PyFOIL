@@ -101,9 +101,9 @@ class ReteTest(TestCase):
         for i, entry in enumerate([
             # TODO
         ]):
-            problem, cache, expected = entry
+            program, cache, expected = entry
             with self.subTest(i=i, value=entry):
-                result = ground(problem, cache)
+                result = ground(program, cache)
 
                 assert_that(result, 'ground(program: Program, cache: bool = True) -> List[Literal]:') \
                     .is_equal_to(expected)

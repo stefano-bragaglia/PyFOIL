@@ -732,11 +732,5 @@ class ProblemTest(TestCase):
     def test__ground(self):  # TODO
         pass
 
-    def test___get_constants(self):  # TODO
-        pass
-
-    def test___get_masks(self):  # TODO
-        pass
-
-    def test___get_variables(self):  # TODO
+    def test__get_masks(self):  # TODO
         pass
