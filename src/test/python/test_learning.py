@@ -2,15 +2,15 @@ from unittest import TestCase
 
 from assertpy import assert_that
 
-from foil.foil import build
-from foil.foil import choose
-from foil.foil import common
-from foil.foil import covers
-from foil.foil import entropy
-from foil.foil import Expand
-from foil.foil import gain
-from foil.foil import learn
-from foil.foil import max_gain
+from foil.learning import build
+from foil.learning import choose
+from foil.learning import common
+from foil.learning import covers
+from foil.learning import entropy
+from foil.learning import Expand
+from foil.learning import gain
+from foil.learning import learn
+from foil.learning import max_gain
 
 
 class ExpandTest(TestCase):
