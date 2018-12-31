@@ -455,7 +455,7 @@ class Problem:
         return self._program.is_ground()
 
     def complete(self):
-        from foil.foil import closure
+        from foil.learning import closure
 
         variables = sorted({v for v in self._target.terms if is_variable(v)})
         constants = {t for c in self._program.clauses for l in c.literals for t in l.terms if is_ground(t)}
