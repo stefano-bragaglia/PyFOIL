@@ -7,6 +7,7 @@ from foil.unification import equate
 from foil.unification import is_ground
 from foil.unification import is_variable
 from foil.unification import normalize
+from foil.unification import resolve
 from foil.unification import simplify
 from foil.unification import unify
 
@@ -39,7 +40,8 @@ class UnificationTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = is_ground(term)
 
-                assert_that(result, 'is_ground').is_equal_to(expected)
+                assert_that(result, 'is_ground(term: Term) -> bool:') \
+                    .is_equal_to(expected)
 
     def test__is_variable(self):
         for i, entry in enumerate([
@@ -67,7 +69,8 @@ class UnificationTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = is_variable(term)
 
-                assert_that(result, 'is_variable').is_equal_to(expected)
+                assert_that(result, 'is_variable(term: Term) -> bool:') \
+                    .is_equal_to(expected)
 
     def test__normalize(self):
         for i, entry in enumerate([
@@ -94,7 +97,8 @@ class UnificationTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = normalize(term)
 
-                assert_that(result, description='normalize').is_equal_to(expected)
+                assert_that(result, 'normalize(term: Term) -> str:') \
+                    .is_equal_to(expected)
 
     def test_unify(self):
         for i, entry in enumerate([
@@ -153,7 +157,9 @@ class UnificationTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = unify(var, term, subst)
 
-                assert_that(result, description='unify').is_equal_to(expected)
+                assert_that(result,
+                            'unify(var: Variable, term: Term, subst: Substitution) -> Optional[Substitution]:') \
+                    .is_equal_to(expected)
 
     def test__assign(self):
         for i, entry in enumerate([
@@ -167,7 +173,9 @@ class UnificationTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = assign(var, term, subst)
 
-                assert_that(result, 'assign').is_equal_to(expected)
+                assert_that(result,
+                            'assign(var: Variable, value: Value, subst: Substitution) -> Optional[Substitution]:') \
+                    .is_equal_to(expected)
 
     def test__equate(self):
         for i, entry in enumerate([
@@ -216,7 +224,9 @@ class UnificationTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = equate(var1, var2, subst)
 
-                assert_that(result, 'equate').is_equal_to(expected)
+                assert_that(result,
+                            'equate(var1: Variable, var2: Variable, subst: Substitution) -> Optional[Substitution]:') \
+                    .is_equal_to(expected)
 
     def test__simplify(self):
         for i, entry in enumerate([
@@ -289,4 +299,17 @@ class UnificationTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = simplify(subst)
 
-                assert_that(result, 'equate').is_equal_to(expected)
+                assert_that(result, 'simplify(subst: Substitution) -> Optional[Substitution]:') \
+                    .is_equal_to(expected)
+
+    def test__resolve(self):
+        for i, entry in enumerate([
+            # TODO
+        ]):
+            program, query, cache, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = resolve(program, query, cache)
+
+                assert_that(result,
+                            'resolve(program: Program, query: Literal, cache: bool = True) -> Optional[Derivation]:') \
+                    .is_equal_to(expected)

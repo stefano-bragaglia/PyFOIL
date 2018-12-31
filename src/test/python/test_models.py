@@ -26,7 +26,8 @@ class AtomTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = Atom.parse(content)
 
-                assert_that(result, 'Atom.parse').is_equal_to(expected)
+                assert_that(result, 'Atom.parse(content: str) -> Atom:') \
+                    .is_equal_to(expected)
 
     def test__get_arity(self):
         for i, entry in enumerate([
@@ -40,7 +41,8 @@ class AtomTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = atom.get_arity()
 
-                assert_that(result, 'Atom.get_arity').is_equal_to(expected)
+                assert_that(result, 'Atom.get_arity(self) -> int:') \
+                    .is_equal_to(expected)
 
     def test__is_ground(self):
         for i, entry in enumerate([
@@ -56,7 +58,8 @@ class AtomTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = atom.is_ground()
 
-                assert_that(result, 'Atom.is_ground').is_equal_to(expected)
+                assert_that(result, 'Atom.is_ground(self) -> bool:') \
+                    .is_equal_to(expected)
 
     def test__unify(self):
         for i, entry in enumerate([
@@ -88,7 +91,8 @@ class AtomTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = atom1.unify(atom2)
 
-                assert_that(result, 'Atom.unify').is_equal_to(expected)
+                assert_that(result, 'Atom.unify(self, other: Atom) -> Optional[Substitution]:') \
+                    .is_equal_to(expected)
 
     def test__substitute(self):
         for i, entry in enumerate([
@@ -112,7 +116,8 @@ class AtomTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = atom.substitute(subst)
 
-                assert_that(result, 'Atom.substitute').is_equal_to(expected)
+                assert_that(result, 'Atom.substitute(self, subst: Substitution) -> Atom:') \
+                    .is_equal_to(expected)
 
 
 class LiteralTest(TestCase):
@@ -151,7 +156,8 @@ class LiteralTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = Literal.parse(content)
 
-                assert_that(result, 'Literal.parse').is_equal_to(expected)
+                assert_that(result, 'Literal.parse(content: str) -> Literal:') \
+                    .is_equal_to(expected)
 
     def test__get_arity(self):
         for i, entry in enumerate([
@@ -170,7 +176,8 @@ class LiteralTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = atom.get_arity()
 
-                assert_that(result, 'Literal.get_arity').is_equal_to(expected)
+                assert_that(result, 'Literal.get_arity(self) -> int:') \
+                    .is_equal_to(expected)
 
     def test__get_complement(self):
         for i, entry in enumerate([
@@ -192,7 +199,8 @@ class LiteralTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = literal.get_complement()
 
-                assert_that(result, 'Literal.get_complement').is_equal_to(expected)
+                assert_that(result, 'Literal.get_complement(self) -> Literal:') \
+                    .is_equal_to(expected)
 
     def test__get_mask(self):
         for i, entry in enumerate([
@@ -214,7 +222,8 @@ class LiteralTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = literal.get_mask()
 
-                assert_that(result, 'Literal.get_mask').is_equal_to(expected)
+                assert_that(result, 'Literal.get_mask(self) -> Mask:') \
+                    .is_equal_to(expected)
 
     def test__is_ground(self):
         for i, entry in enumerate([
@@ -237,7 +246,8 @@ class LiteralTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = atom.is_ground()
 
-                assert_that(result, 'Literal.is_ground').is_equal_to(expected)
+                assert_that(result, 'Literal.is_ground(self) -> bool:') \
+                    .is_equal_to(expected)
 
     def test__unify(self):
         for i, entry in enumerate([
@@ -372,7 +382,9 @@ class LiteralTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = atom1.unify(atom2)
 
-                assert_that(result, 'Literal.unify').is_equal_to(expected)
+                assert_that(result, 'Literal.unify(self, other: Literal) -> Optional[Substitution]:') \
+                    .is_equal_to(
+                    expected)
 
     def test__substitute(self):
         for i, entry in enumerate([
@@ -411,7 +423,8 @@ class LiteralTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = atom.substitute(subst)
 
-                assert_that(result, 'Literal.substitute').is_equal_to(expected)
+                assert_that(result, 'Literal.substitute(self, substitution: Substitution) -> Literal:') \
+                    .is_equal_to(expected)
 
 
 class ClauseTest(TestCase):
@@ -452,7 +465,8 @@ class ClauseTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = Clause.parse(content)
 
-                assert_that(result, 'Clause.parse').is_equal_to(expected)
+                assert_that(result, 'Clause.parse(content: str) -> Clause:') \
+                    .is_equal_to(expected)
 
     def test__get_arity(self):
         for i, entry in enumerate([
@@ -499,7 +513,8 @@ class ClauseTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = clause.get_arity()
 
-                assert_that(result, 'Clause.get_arity').is_equal_to(expected)
+                assert_that(result, 'Clause.get_arity(self) -> int:') \
+                    .is_equal_to(expected)
 
     def test__is_fact(self):
         for i, entry in enumerate([
@@ -546,7 +561,8 @@ class ClauseTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = clause.is_fact()
 
-                assert_that(result, 'Clause.is_fact').is_equal_to(expected)
+                assert_that(result, 'Clause.is_fact(self) -> bool:') \
+                    .is_equal_to(expected)
 
     def test__is_ground(self):
         for i, entry in enumerate([
@@ -593,7 +609,8 @@ class ClauseTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = clause.is_ground()
 
-                assert_that(result, 'Clause.is_ground').is_equal_to(expected)
+                assert_that(result, 'Clause.is_ground(self) -> bool:') \
+                    .is_equal_to(expected)
 
     def test__substitute(self):
         for i, entry in enumerate([
@@ -642,7 +659,8 @@ class ClauseTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = clause.substitute(subst)
 
-                assert_that(result, 'Clause.substitute').is_equal_to(expected)
+                assert_that(result, 'Clause.substitute(self, substitution: Substitution) -> Clause:') \
+                    .is_equal_to(expected)
 
 
 class ProgramTest(TestCase):

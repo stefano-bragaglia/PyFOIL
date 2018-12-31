@@ -22,7 +22,8 @@ class RootTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = root.notify(fact)
 
-                assert_that(result, 'Root.notify').is_equal_to(expected)
+                assert_that(result, 'Root.notify(self, fact: Literal):') \
+                    .is_equal_to(expected)
 
 
 class AlphaTest(TestCase):
@@ -35,7 +36,8 @@ class AlphaTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = alpha.notify(fact, subst, parent)
 
-                assert_that(result, 'Alpha.notify').is_equal_to(expected)
+                assert_that(result, 'Alpha.notify(self, fact: Literal, subst: Substitution, parent: Root):') \
+                    .is_equal_to(expected)
 
 
 class BetaTest(TestCase):
@@ -49,7 +51,8 @@ class BetaTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = beta.notify(fact, subst, parent)
 
-                assert_that(result, 'Beta.notify').is_equal_to(expected)
+                assert_that(result, 'Beta.notify(self, fact: List[Literal], subst: Substitution, parent: Node):') \
+                    .is_equal_to(expected)
 
 
 class LeafTest(TestCase):
@@ -63,7 +66,8 @@ class LeafTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = leaf.notify(fact, subst, parent)
 
-                assert_that(result, 'Leaf.notify').is_equal_to(expected)
+                assert_that(result, 'Leaf.notify(self, fact: List[Literal], subst: Substitution, parent: Node):') \
+                    .is_equal_to(expected)
 
 
 class EngineTest(TestCase):
@@ -76,7 +80,8 @@ class EngineTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = engine.load(clause)
 
-                assert_that(result, 'Engine.load').is_equal_to(expected)
+                assert_that(result, 'Engine.load(self, clause: Clause):') \
+                    .is_equal_to(expected)
 
     def test__insert(self):
         for i, entry in enumerate([
@@ -86,15 +91,19 @@ class EngineTest(TestCase):
             with self.subTest(i=i, value=entry):
                 result = engine.insert(fact)
 
-                assert_that(result, 'Engine.insert').is_equal_to(expected)
+                assert_that(result, 'Engine.insert(self, fact: Clause):') \
+                    .is_equal_to(expected)
 
 
 class ReteTest(TestCase):
 
     def test__ground(self):
-        for i, entry in enumerate([]):  # TODO
+        for i, entry in enumerate([
+            # TODO
+        ]):
             problem, cache, expected = entry
             with self.subTest(i=i, value=entry):
                 result = ground(problem, cache)
 
-                assert_that(result, 'ground').is_equal_to(expected)
+                assert_that(result, 'ground(program: Program, cache: bool = True) -> List[Literal]:') \
+                    .is_equal_to(expected)
