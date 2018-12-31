@@ -1,6 +1,6 @@
 from typing import List
 
-from foil.foil import learn
+from foil.learning import learn
 from foil.models import Atom
 from foil.models import Clause
 from foil.models import Example

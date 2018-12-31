@@ -24,7 +24,7 @@ class FoilVisitor(PTNodeVisitor):
         return children[0]
 
     def visit_example(self, node: Node, children: List) -> 'Example':
-        from temp.model import Example
+        from foil.models import Example
 
         return Example(children[0], children[1])
 

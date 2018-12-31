@@ -67,9 +67,9 @@ class FoilTest(TestCase):
         for i, entry in enumerate([
             # TODO
         ]):
-            background, hypothesis, target, masks, positives, negatives, expected = entry
+            background, hypothesis, target, body, masks, positives, negatives, expected = entry
             with self.subTest(i=i, value=entry):
-                result = choose(background, hypothesis, target, masks, positives, negatives)
+                result = choose(background, hypothesis, target, body,  masks, positives, negatives)
 
                 assert_that(
                     result,
@@ -83,9 +83,9 @@ class FoilTest(TestCase):
         for i, entry in enumerate([
             # TODO
         ]):
-            background, hypothesis, target, body, masks, examples, expected = entry
+            background, hypothesis, target, body, examples, expected = entry
             with self.subTest(i=i, value=entry):
-                result = covers(background, hypothesis, target, body, masks, examples)
+                result = covers(background, hypothesis, target, body, examples)
 
                 assert_that(
                     result,
@@ -120,7 +120,9 @@ class FoilTest(TestCase):
 
                 assert_that(
                     result,
-                    'max_gain(positives: Iterable[Example], negatives: Iterable[Example], positives_i: Iterable[Example]) -> float:'
+                    'max_gain(positives: Iterable[Example], negatives: Iterable[Example], '
+                    '         positives_i: Iterable[Example]'
+                    ') -> float:'
                 ).is_equal_to(expected)
 
     def test__common(self):
