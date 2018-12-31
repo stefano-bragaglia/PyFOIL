@@ -11,6 +11,7 @@ from foil.learning import Expand
 from foil.learning import gain
 from foil.learning import learn
 from foil.learning import max_gain
+from foil.learning import subtract
 
 
 class ExpandTest(TestCase):
@@ -60,7 +61,7 @@ class FoilTest(TestCase):
                     'build(background: Iterable[Clause], hypothesis: Iterable[Clause], '
                     '      target: Literal, masks: Iterable[Mask], '
                     '      positives: Iterable[Example], negatives: Iterable[Example]'
-                    ') -> Tuple[Clause, Iterable[Example], Iterable[Example]]:'
+                    ') -> Tuple[Clause, List[Example], List[Example]]:'
                 ).is_equal_to(expected)
 
     def test__choose(self):
@@ -69,14 +70,14 @@ class FoilTest(TestCase):
         ]):
             background, hypothesis, target, body, masks, positives, negatives, expected = entry
             with self.subTest(i=i, value=entry):
-                result = choose(background, hypothesis, target, body,  masks, positives, negatives)
+                result = choose(background, hypothesis, target, body, masks, positives, negatives)
 
                 assert_that(
                     result,
                     'choose(background: Iterable[Clause], hypothesis: Iterable[Clause], '
                     '       target: Literal, body: Iterable[Literal], masks: Iterable[Mask], '
                     '       positives: Iterable[Example], negatives: Iterable[Example]'
-                    ') -> Optional[Tuple[Literal, Iterable[Example], Iterable[Example]]]:'
+                    ') -> Optional[Tuple[Literal, List[Example]]]:'
                 ).is_equal_to(expected)
 
     def test__covers(self):
@@ -93,6 +94,19 @@ class FoilTest(TestCase):
                     '       target: Literal, body: Iterable[Literal],'
                     '       examples: Iterable[Example]'
                     ') -> Iterable[Example]:'
+                ).is_equal_to(expected)
+
+    def test__subtract(self):
+        for i, entry in enumerate([
+            # TODO
+        ]):
+            examples, covered, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = subtract(examples, covered)
+
+                assert_that(
+                    result,
+                    'subtract(examples: Iterable[Example], covered: Iterable[Example]) -> List[Iterable]:'
                 ).is_equal_to(expected)
 
     def test__gain(self):

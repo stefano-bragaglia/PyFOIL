@@ -81,8 +81,11 @@ def learn(
 ) -> List['Clause']:
     hypothesis = []
     while positives:
-        clause, positives, negatives = build(background, hypothesis, target, masks, positives, negatives)
+        clause, covered = build(background, hypothesis, target, masks, positives, negatives)
         hypothesis.append(clause)
+        positives = subtract(positives, covered)
+        if not covered:
+            break
 
     return hypothesis
 
@@ -94,19 +97,22 @@ def build(
         masks: Iterable['Mask'],
         positives: Iterable['Example'],
         negatives: Iterable['Example'],
-) -> Tuple['Clause', List['Example'], List['Example']]:
+) -> Tuple['Clause', List['Example']]:
     from foil.models import Clause
 
     body = []
     while negatives:
         selection = choose(background, hypothesis, target, body, masks, positives, negatives)
         if selection is None:
-            return Clause(target, body), positives, negatives
+            break
 
-        candidate, positives, negatives = selection
+        candidate, covered = selection
         body.append(candidate)
+        negatives = subtract(negatives, covered)
+        if not covered:
+            break
 
-    return Clause(target, body), positives, negatives
+    return Clause(target, body), list(positives)
 
 
 def choose(
@@ -117,12 +123,11 @@ def choose(
         masks: Iterable['Mask'],
         positives: Iterable['Example'],
         negatives: Iterable['Example'],
-) -> Optional[Tuple['Literal', List['Example'], List['Example']]]:
+) -> Optional[Tuple['Literal', List['Example']]]:
     from foil.models import Atom
     from foil.models import Literal
 
-    best_score, best_candidate, best_positives, best_negatives = None, None, None, None
-
+    best_score, best_candidate, best_negatives = None, None, None
     variables = {t for l in [target, *body] for t in l.terms if is_variable(t)}
     for mask in masks:
         for terms in Expand(variables, mask.arity):
@@ -135,14 +140,13 @@ def choose(
                 negatives_i = covers(background, hypothesis, target, [*body, candidate], negatives)
                 score = gain(positives, negatives, positives_i, negatives_i)
                 if best_score is None or score > best_score:
-                    best_score, best_candidate, best_positives, best_negatives = \
-                        score, candidate, positives_i, negatives_i
+                    best_score, best_candidate, best_negatives = score, candidate, negatives_i
 
     if best_score is None:
         return None
 
     # TODO check what is returned for positives and negatives (change again uncovers to covers?)
-    return best_candidate, best_positives, best_negatives
+    return best_candidate, best_negatives
 
 
 def covers(
@@ -159,15 +163,21 @@ def covers(
     program = Program(list({*background, *hypothesis, Clause(target, list(body))}))
     world = program.ground()
 
-    uncovered = []
+    covered = []
     for example in examples:
         fact = target.substitute(example.assignment)
-        if example in uncovered \
+        if example in covered \
                 or example.label is Label.NEGATIVE and fact in world \
                 or example.label is Label.POSITIVE and fact not in world:
-            uncovered.append(example)
+            continue
 
-    return uncovered
+        covered.append(example)
+
+    return covered
+
+
+def subtract(examples: Iterable['Example'], covered: Iterable['Example']) -> List['Example']:
+    return [e for e in examples if e not in covered]
 
 
 def gain(
@@ -192,6 +202,9 @@ def common(positives: Iterable['Example'], positives_i: Iterable['Example']) -> 
 
 
 def entropy(positives: Iterable['Example'], negatives: Iterable['Example']) -> float:
+    if not negatives or not positives:
+        return math.inf
+
     return -math.log2(len(list(positives)) / len([*positives, *negatives]))
 
 

@@ -23,7 +23,7 @@ def is_variable(term: Term) -> bool:
 
 
 def normalize(term: Term) -> str:
-    if any(isinstance(term, c) for c in [bool, float, int]):
+    if isinstance(term, bool) or isinstance(term, float) or isinstance(term, int):
         return str(term)
 
     if isinstance(term, str) and re.match(r'[_a-zA-Z][_a-zA-Z0-9]*', term):
