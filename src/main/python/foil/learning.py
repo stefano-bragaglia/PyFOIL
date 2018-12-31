@@ -81,7 +81,11 @@ def learn(
 ) -> List['Clause']:
     hypothesis = []
     while positives:
-        clause, covered = build(background, hypothesis, target, masks, positives, negatives)
+        selection = build(background, hypothesis, target, masks, positives, negatives)
+        if selection is None:
+            break
+
+        clause, covered = selection
         hypothesis.append(clause)
         positives = subtract(positives, covered)
         if not covered:
@@ -97,7 +101,7 @@ def build(
         masks: Iterable['Mask'],
         positives: Iterable['Example'],
         negatives: Iterable['Example'],
-) -> Tuple['Clause', List['Example']]:
+) -> Optional[Tuple['Clause', List['Example']]]:
     from foil.models import Clause
 
     body = []
@@ -111,6 +115,9 @@ def build(
         negatives = subtract(negatives, covered)
         if not covered:
             break
+
+    if not body:
+        return None
 
     return Clause(target, body), list(positives)
 
@@ -132,7 +139,7 @@ def choose(
     for mask in masks:
         for terms in Expand(variables, mask.arity):
             candidate = Literal(Atom(mask.functor, terms), mask.negated)
-            if candidate not in body:
+            if candidate != target and candidate not in body:
                 positives_i = covers(background, hypothesis, target, [*body, candidate], positives)
                 if best_score is not None and max_gain(positives, negatives, positives_i) < best_score:
                     continue
@@ -169,9 +176,7 @@ def covers(
         if example in covered \
                 or example.label is Label.NEGATIVE and fact in world \
                 or example.label is Label.POSITIVE and fact not in world:
-            continue
-
-        covered.append(example)
+            covered.append(example)
 
     return covered
 
@@ -186,7 +191,7 @@ def gain(
         positives_i: Iterable['Example'],
         negatives_i: Iterable['Example'],
 ) -> float:
-    return common(positives, positives_i) * (entropy(positives, negatives) - entropy(positives_i, negatives_i))
+    return common(positives, positives_i) * (entropy(positives_i, negatives_i) - entropy(positives, negatives))
 
 
 def max_gain(

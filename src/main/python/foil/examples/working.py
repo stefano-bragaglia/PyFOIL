@@ -37,7 +37,8 @@ def _negatives() -> List[Example]:
 
 if __name__ == '__main__':
     result = learn(_background(), _target(), _masks(), _positives(), _negatives())
-    print(len(result), result)
+    for i, clause in enumerate(result):
+        print(i + 1, '\t', clause)
     print()
 
     print('Done.')
