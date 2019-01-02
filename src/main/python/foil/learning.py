@@ -1,4 +1,5 @@
 import math
+from collections import namedtuple
 from itertools import combinations
 from itertools import permutations
 from typing import Iterable
@@ -6,29 +7,251 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
-from foil.unification import is_variable
-from foil.unification import Value
-from foil.unification import Variable
+Hypothesis = namedtuple('Hypothesis', ['clause', 'positives'])
 
-_tabling = {}
+_tabling_learn_hypotheses = {}
 
 
-def extract(target: 'Literal', body: List['Literal']) -> List['Variable']:
-    variables = []
+def learn_hypotheses(
+        background: List['Clause'],
+        target: 'Literal',
+        masks: List['Mask'],
+        positives: List['Literal'],
+        negatives: List['Literal'],
+        cache: bool = True,
+) -> List['Clause']:
+    global _tabling_learn_hypotheses
+
+    key = (tuple(background), target, tuple(masks), tuple(positives), tuple(negatives))
+    if cache and key in _tabling_learn_hypotheses:
+        return _tabling_learn_hypotheses[key]
+
+    excluded = []
+    hypotheses = []
+    while positives:
+        result = learn_clause(background, hypotheses, excluded, target, masks, positives, negatives)
+        if result is None:
+            break
+
+        if result.positives == positives:
+            excluded.append(result.clause)
+            continue
+
+        print(result.clause)
+        hypotheses.append(result.clause)
+        positives = result.positives
+        excluded = []
+
+    if not cache:
+        return hypotheses
+    return _tabling_learn_hypotheses.setdefault(key, hypotheses)
+
+
+Candidate = namedtuple('LiteralEntry', ['score', 'candidate', 'positives', 'negatives'])
+
+_tabling_learn_clause = {}
+
+
+def learn_clause(
+        background: List['Clause'],
+        hypotheses: List['Clause'],
+        excluded: List['Clause'],
+        target: 'Literal',
+        masks: List['Mask'],
+        positives: List['Literal'],
+        negatives: List['Literal'],
+        cache: bool = True
+) -> Optional[Hypothesis]:
+    from foil.models import Clause
+
+    global _tabling_learn_clause
+
+    key = (
+        tuple(background), tuple(hypotheses), tuple(excluded), target, tuple(masks), tuple(positives), tuple(negatives))
+    if cache and key in _tabling_learn_clause:
+        return _tabling_learn_clause[key]
+
+    body = []
+    while negatives and not is_over(target, body):
+        result = find_literal(background, hypotheses, excluded, target, body, masks, positives, negatives)
+        if result is None:
+            break
+
+        print('\t', body, result.candidate, '%.3f' % result.score)
+        body.append(result.candidate)
+        positives = result.positives
+        negatives = result.negatives
+
+    hypothesis = Hypothesis(Clause(target, body), positives)
+    if not cache:
+        return hypothesis
+    return _tabling_learn_clause.setdefault(key, hypothesis)
+
+
+_tabling_over = {}
+
+
+def is_over(
+        target: 'Literal',
+        body: List['Literal'],
+        cache: bool = True,
+) -> bool:
+    from foil.unification import is_variable
+
+    global _tabling_over
+
+    key = (target, tuple(body))
+    if cache and key in _tabling_over:
+        return _tabling_over[key]
+
+    if not body:
+        if not cache:
+            return False
+        return _tabling_over.setdefault(key, False)
+
+    count = {}
     for literal in [target, *body]:
         for term in literal.terms:
-            if is_variable(term) and term not in variables:
-                variables.append(term)
+            if is_variable(term):
+                count[term] = count.get(term, 0) + 1
 
-    return variables
+    if not cache:
+        return 1 not in count.values()
+    return _tabling_over.setdefault(key, 1 not in count.values())
 
 
-def closure(variables: List[Variable], constants: List[Value], examples: List['Example']) -> List['Example']:
+_tabling_literal = {}
+
+
+def find_literal(
+        background: List['Clause'],
+        hypotheses: List['Clause'],
+        excluded: List['Clause'],
+        target: 'Literal', body: List['Literal'],
+        masks: List['Mask'],
+        positives: List['Literal'],
+        negatives: List['Literal'],
+        cache: bool = True,
+) -> Optional[Candidate]:
+    from foil.models import Atom
+    from foil.models import Clause
+    from foil.models import Literal
+    from foil.models import Program
+
+    global _tabling_literal
+
+    key = (tuple(background), tuple(hypotheses), tuple(excluded), target, tuple(body), tuple(masks), tuple(positives),
+           tuple(negatives))
+    if cache and key in _tabling_literal:
+        return _tabling_literal[key]
+
+    candidate = None
+    variables = get_variables(target, body)
+    for mask in masks:
+        for items in itemize(variables, mask.arity):
+            literal = Literal(Atom(mask.functor, items), mask.negated)
+            hypothesis = Clause(target, [*body, literal])
+            if literal != target \
+                    and literal not in body \
+                    and hypothesis not in hypotheses \
+                    and hypothesis not in excluded:
+                clauses = get_clauses(background, hypotheses, target, [*body, literal])
+                program = Program(clauses)
+                world = program.ground()
+
+                positives_i = [p for p in positives if p in world]
+                negatives_i = [n for n in negatives if n not in world]
+                # if negatives_i == negatives:
+                #     continue
+
+                score = gain(positives, negatives, positives_i, negatives_i)
+                print('\t\t', literal, '%.3f' % score, len(positives_i), len(negatives_i))
+                if candidate is None or score > candidate.score:
+                    candidate = Candidate(score, literal, positives_i, negatives_i)
+
+    if not cache:
+        return candidate
+    return _tabling_literal.setdefault(key, candidate)
+
+
+_tabling_clauses = {}
+
+
+def get_clauses(
+        background: List['Clause'],
+        hypotheses: List['Clause'],
+        target: 'Literal',
+        body: List['Literal'],
+        cache: bool = True,
+) -> List['Clause']:
+    from foil.models import Clause
+    from foil.models import Program
+
+    global _tabling_clauses
+
+    candidate = Clause(target, body)
+    key = Program([*hypotheses, candidate, *background])
+    if cache and key in _tabling_clauses:
+        return _tabling_clauses[key]
+
+    clauses = []
+    for clause in key.clauses:
+        if clause not in clauses:
+            clauses.append(clause)
+
+    if not cache:
+        return clauses
+    return _tabling_clauses.setdefault(key, clauses)
+
+
+_tabling_constants = {}
+
+
+def get_constants(
+        background: List['Clause'],
+        target: 'Literal',
+        cache: bool = True,
+) -> List['Value']:
+    from foil.unification import is_ground
+
+    global _tabling_constants
+
+    key = (tuple(background), target)
+    if cache and key in _tabling_constants:
+        return _tabling_constants[key]
+
+    constants = []
+    for literal in [target, *[l for c in background for l in c.literals]]:
+        for term in literal.terms:
+            if is_ground(term) and term not in constants:
+                constants.append(term)
+
+    if not cache:
+        return constants
+    return _tabling_constants.setdefault(key, constants)
+
+
+_tabling_examples = {}
+
+
+def get_examples(
+        background: List['Clause'],
+        target: 'Literal',
+        examples: List['Example'],
+        cache: bool = True,
+) -> Tuple[List['Literal'], List['Literal']]:
     from foil.models import Example
     from foil.models import Label
 
-    values = constants * len(variables)
-    for values in permutations(values, len(variables)):
+    global _tabling_examples
+
+    key = (tuple(background), target, tuple(examples))
+    if cache and key in _tabling_examples:
+        return _tabling_examples[key]
+
+    variables = get_variables(target, [])
+    constants = get_constants(background, target, cache)
+    for values in permutations(constants * len(variables), len(variables)):
         assignment = dict(zip(variables, values))
         if Example(assignment) in examples:
             continue
@@ -37,70 +260,92 @@ def closure(variables: List[Variable], constants: List[Value], examples: List['E
         if example not in examples:
             examples.append(example)
 
-    return sorted(examples, key=lambda x: repr((x.label, *[(k, v) for k, v in sorted(x.assignment.items())])))
+    positives, negatives = [], []
+    for example in examples:
+        literal = target.substitute(example.assignment)
+        if example.label is Label.POSITIVE and literal not in positives:
+            positives.append(literal)
+        if example.label is Label.NEGATIVE and literal not in negatives:
+            negatives.append(literal)
+
+    if not cache:
+        return positives, negatives
+    return _tabling_examples.setdefault(key, (positives, negatives))
 
 
-def learn(
-        background: Iterable['Clause'],
+_tabling_masks = {}
+
+
+def get_masks(
+        background: List['Clause'],
         target: 'Literal',
-        masks: Iterable['Mask'],
-        positives: Iterable['Example'],
-        negatives: Iterable['Example'],
-) -> List['Clause']:
-    hypothesis = []
-    while positives:
-        selection = build(background, hypothesis, target, masks, positives, negatives)
-        if selection is None:
-            break
-
-        clause, covered = selection
-        hypothesis.append(clause)
-        positives = subtract(positives, covered)
-        if not covered:
-            break
-
-    return hypothesis
-
-
-def build(
-        background: Iterable['Clause'],
-        hypothesis: Iterable['Clause'],
-        target: 'Literal',
-        masks: Iterable['Mask'],
-        positives: Iterable['Example'],
-        negatives: Iterable['Example'],
-) -> Optional[Tuple['Clause', List['Example']]]:
+        cache: bool = True,
+) -> List['Mask']:
     from foil.models import Clause
+    from foil.models import Program
 
-    body = []
-    while negatives:
-        selection = choose(background, hypothesis, target, body, masks, positives, negatives)
-        if selection is None:
-            break
+    global _tabling_masks
 
-        candidate, covered = selection
-        body.append(candidate)
-        negatives = subtract(negatives, covered)
-        if not covered:
-            break
+    candidate = Clause(target)
+    key = Program([candidate, *background])
+    if cache and key in _tabling_masks:
+        return _tabling_masks[key]
 
-    if not body:
-        return None
+    masks = []
+    for literal in [*[l for c in background for l in c.literals], target]:
+        mask = literal.get_mask()
+        if mask not in masks:
+            masks.append(mask)
 
-    return Clause(target, body), list(positives)
+    if not cache:
+        return masks
+    return _tabling_masks.setdefault(key, masks)
 
 
-def choose(
-        background: Iterable['Clause'],
-        hypothesis: Iterable['Clause'],
+_tabling_terms = {}
+
+
+def get_terms(
+        variables: List['Variable'],
+        combination: Tuple[int, ...],
+        cache: bool = True,
+) -> List['Variable']:
+    global _tabling_terms
+
+    key = (tuple(variables), combination)
+    if cache and key in _tabling_terms:
+        return _tabling_terms[key]
+
+    terms = []
+    i, table = 0, {i: v for i, v in enumerate(variables)}
+    for index in combination:
+        if index not in table:
+            while ('V%d' % i) in variables:
+                i += 1
+            table[index] = 'V%d' % i
+        terms.append(table[index])
+
+    if not cache:
+        return terms
+    return _tabling_terms.setdefault(key, terms)
+
+
+_tabling_variables = {}
+
+
+def get_variables(
         target: 'Literal',
-        body: Iterable['Literal'],
-        masks: Iterable['Mask'],
-        positives: Iterable['Example'],
-        negatives: Iterable['Example'],
-) -> Optional[Tuple['Literal', List['Example']]]:
-    from foil.models import Atom
-    from foil.models import Literal
+        body: List['Literal'],
+        cache: bool = True,
+) -> List['Variable']:
+    from foil.models import Clause
+    from foil.unification import is_variable
+
+    global _tabling_variables
+
+    key = Clause(target, body)
+    if cache and key in _tabling_variables:
+        return _tabling_variables[key]
 
     variables = []
     for literal in [target, *body]:
@@ -108,37 +353,28 @@ def choose(
             if is_variable(term) and term not in variables:
                 variables.append(term)
 
-    best_score, best_candidate, best_negatives = None, None, None
-    for mask in masks:
-        for items in itemize(variables, mask.arity):
-            candidate = Literal(Atom(mask.functor, items), mask.negated)
-            if candidate != target and candidate not in body:
-                positives_i = covers(background, hypothesis, target, [*body, candidate], positives)
-                if best_score is not None and max_gain(positives, negatives, positives_i) < best_score:
-                    continue
-
-                negatives_i = covers(background, hypothesis, target, [*body, candidate], negatives)
-                score = gain(positives, negatives, positives_i, negatives_i)
-                if best_score is None or score > best_score:
-                    best_score, best_candidate, best_negatives = score, candidate, negatives_i
-
-    if best_score is None:
-        return None
-
-    # TODO check what is returned for positives and negatives (change again uncovers to covers?)
-    return best_candidate, best_negatives
+    if not cache:
+        return variables
+    return _tabling_variables.setdefault(key, variables)
 
 
-def itemize(variables: List['Variable'], arity: int, cache: bool = True) -> Iterable[List['Term']]:
+_tabling_itemize = {}
+
+
+def itemize(
+        variables: List['Variable'],
+        arity: int,
+        cache: bool = True,
+) -> Iterable[List['Term']]:
     global _tabling_itemize
 
-    key = tuple(variables)
-    if cache and key in _tabling and arity in _tabling[key]:
-        return _tabling[key][arity]
+    key = tuple([*variables, arity])
+    if cache and key in _tabling_itemize:
+        return _tabling_itemize[key]
 
     size = len(variables)
     values = [v for v in range(arity + size)] * arity
-    signatures = {as_terms(variables, c) for c in combinations(values, arity) if any(p < size for p in c)}
+    signatures = {tuple(get_terms(variables, c)) for c in combinations(values, arity) if any(p < size for p in c)}
     indexes = sorted([(
         len(set(signature)),
         sum(1 for v in set(signature) if v not in variables),
@@ -149,99 +385,68 @@ def itemize(variables: List['Variable'], arity: int, cache: bool = True) -> Iter
 
     if not cache:
         return items
-
-    return _tabling.setdefault(key, {}).setdefault(arity, items)
-
-
-def as_terms(variables: List[Variable], combination: Tuple[int, ...]) -> Tuple[Variable]:
-    terms = tuple()
-    i, table = 0, {i: v for i, v in enumerate(variables)}
-    for index in combination:
-        if index not in table:
-            while ('V%d' % i) in variables:
-                i += 1
-            table[index] = 'V%d' % i
-        terms = (*terms, table[index])
-
-    return terms
+    return _tabling_itemize.setdefault(key, items)
 
 
-def covers(
-        background: Iterable['Clause'],
-        hypothesis: Iterable['Clause'],
-        target: 'Literal',
-        body: Iterable['Literal'],
-        examples: Iterable['Example'],
-) -> List['Example']:
-    from foil.models import Clause
-    from foil.models import Label
-    from foil.models import Program
-
-    program = Program(list({*background, *hypothesis, Clause(target, list(body))}))
-    world = program.ground()
-
-    covered = []
-    for example in examples:
-        fact = target.substitute(example.assignment)
-        if example in covered \
-                or example.label is Label.NEGATIVE and fact in world \
-                or example.label is Label.POSITIVE and fact not in world:
-            continue
-
-        covered.append(example)
-
-    return covered
-
-
-def subtract(examples: Iterable['Example'], covered: Iterable['Example']) -> List['Example']:
-    return [e for e in examples if e not in covered]
+_tabling_gain = {}
 
 
 def gain(
-        positives: Iterable['Example'],
-        negatives: Iterable['Example'],
-        positives_i: Iterable['Example'],
-        negatives_i: Iterable['Example'],
+        positives: List['Literal'],
+        negatives: List['Literal'],
+        positives_i: List['Literal'],
+        negatives_i: List['Literal'],
+        cache: bool = True,
 ) -> float:
-    return common(positives, positives_i) * (entropy(positives_i, negatives_i) - entropy(positives, negatives))
+    global _tabling_gain
+
+    key = (tuple(positives), tuple(negatives), tuple(positives_i), tuple(negatives_i))
+    if cache and key in _tabling_gain:
+        return _tabling_gain[key]
+
+    common = sum(1 for p in positives_i if p in positives)
+    if common == 0:
+        if not cache:
+            return 0
+        return _tabling_gain.setdefault(key, 0)
+
+    information = entropy(positives, negatives)
+    information_i = entropy(positives_i, negatives_i)
+    difference = information_i - information
+    value = common * difference
+
+    if not cache:
+        return value
+    return _tabling_gain.setdefault(key, value)
 
 
-def max_gain(
-        positives: Iterable['Example'],
-        negatives: Iterable['Example'],
-        positives_i: Iterable['Example'],
+_tabling_entropy = {}
+
+
+def entropy(
+        positives: List['Literal'],
+        negatives: List['Literal'],
+        cache: bool = True,
 ) -> float:
-    return common(positives, positives_i) * entropy(positives, negatives)
+    global _tabling_entropy
 
+    key = (tuple(positives), tuple(negatives))
+    if cache and key in _tabling_entropy:
+        return _tabling_entropy[key]
 
-def common(positives: Iterable['Example'], positives_i: Iterable['Example']) -> int:
-    return sum(1 for e in positives_i if e in positives)
-
-
-def entropy(positives: Iterable['Example'], negatives: Iterable['Example']) -> float:
     num = sum(1 for e in positives)
     den = num + sum(1 for e in negatives)
     if den == 0 or num == den:
-        return 0.0
-
-    if den == 0 or num == den:
-        return 0
+        if not cache:
+            return 0
+        return _tabling_entropy.setdefault(key, 0)
 
     if num == 0:
-        return math.inf
+        if not cache:
+            return math.inf
+        return _tabling_entropy.setdefault(key, math.inf)
 
-    return -math.log2(num / den)
-
-
-def foil(problem: 'Problem', cache: bool = True) -> List['Clause']:
-    global _tabling_itemize
-
-    if cache and problem in _tabling:
-        return _tabling[problem]
-
-    hypothesis = learn(problem.clauses, problem.target, problem.get_masks(), problem.positives, problem.negatives)
-
+    value = -math.log2(num / den)
     if not cache:
-        return hypothesis
-
-    return _tabling.setdefault(problem, hypothesis)
+        return value
+    return _tabling_entropy.setdefault(key, value)

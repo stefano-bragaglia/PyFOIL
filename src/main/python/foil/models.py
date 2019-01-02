@@ -394,8 +394,7 @@ class Problem:
     def __init__(self, program: Program, target: Literal, examples: List[Example] = None):
         self._program = program
         self._target = target
-        self._positives = [e for e in examples or [] if e.label if Label.POSITIVE]
-        self._negatives = [e for e in examples or [] if e.label if Label.NEGATIVE]
+        self._examples = examples
 
     def __hash__(self) -> int:
         return hash((self._target, self._program))
@@ -425,15 +424,7 @@ class Problem:
 
     @property
     def examples(self) -> Iterable[Example]:
-        return [*self._positives, *self._negatives]
-
-    @property
-    def positives(self) -> Iterable[Example]:
-        return self._positives
-
-    @property
-    def negatives(self) -> Iterable[Example]:
-        return self._negatives
+        return self._examples
 
     @property
     def program(self) -> Program:
@@ -454,30 +445,19 @@ class Problem:
     def is_ground(self) -> bool:
         return self._program.is_ground()
 
-    def complete(self):
-        from foil.learning import closure
-
-        variables = sorted({v for v in self._target.terms if is_variable(v)})
-        constants = {t for c in self._program.clauses for l in c.literals for t in l.terms if is_ground(t)}
-        constants.update({t for t in self._target.terms if is_ground(t)})
-        constants = sorted(constants, key=lambda x: str(repr(x)))
-        examples = [*self._positives, *self._negatives]
-
-        completion = closure(variables, constants, examples)
-        self._positives = [e for e in completion if e.label is Label.POSITIVE]
-        self._negatives = [e for e in completion if e.label is Label.NEGATIVE]
-
     def resolve(self, query: Literal) -> Optional[Derivation]:
         return self._program.resolve(query)
 
     def ground(self) -> List[Literal]:
         return self._program.ground()
 
-    def get_masks(self) -> List[Mask]:
-        masks = []
-        for literal in [*[c.head for c in self._program.clauses], self._target]:
-            mask = literal.get_mask()
-            if mask not in masks:
-                masks.append(mask)
+    def learn(self) -> List[Clause]:
+        from foil.learning import get_examples
+        from foil.learning import get_masks
+        from foil.learning import learn_hypotheses
 
-        return masks
+        masks = get_masks(list(self._program.clauses), self._target)
+        positives, negatives = get_examples(list(self._program.clauses), self._target, list(self._examples))
+        print(len(positives), len(negatives))
+
+        return learn_hypotheses(list(self._program.clauses), self._target, masks, positives, negatives)
