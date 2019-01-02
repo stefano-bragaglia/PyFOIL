@@ -161,11 +161,11 @@ def find_literal(
 
                 positives_i = [p for p in positives if p in world]
                 negatives_i = [n for n in negatives if n not in world]
-                # if negatives_i == negatives:
-                #     continue
+                if negatives_i == negatives:
+                    continue
 
                 score = gain(positives, negatives, positives_i, negatives_i)
-                print('\t\t', literal, '%.3f' % score, len(positives_i), len(negatives_i))
+                print('\t\t', '%.3f' % score, len(positives_i), len(negatives_i), body, literal)
                 if candidate is None or score > candidate.score:
                     candidate = Candidate(score, literal, positives_i, negatives_i)
 

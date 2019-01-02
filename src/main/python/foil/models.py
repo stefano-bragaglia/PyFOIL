@@ -367,7 +367,7 @@ class Example:
 
     def __repr__(self) -> str:
         return '<%s>(%s)' % (
-            ', '.join('%s=%s' % (normalize(v), normalize(t)) for v, t in sorted(self._assignment.items())),
+            ','.join('%s=%s' % (normalize(v), normalize(t)) for v, t in sorted(self._assignment.items())),
             self._label.value
         )
 
@@ -394,7 +394,7 @@ class Problem:
     def __init__(self, program: Program, target: Literal, examples: List[Example] = None):
         self._program = program
         self._target = target
-        self._examples = examples
+        self._examples = sorted(examples, key=lambda x: repr(x))
 
     def __hash__(self) -> int:
         return hash((self._target, self._program))
@@ -409,10 +409,12 @@ class Problem:
         return self._program == other._program
 
     def __repr__(self) -> str:
+        dataset = ', '.join(repr(e) for e in self._examples)
+        descriptor = '#%s%s.' % (repr(self._target), ':\n  %s' % dataset)
         if self._program.is_empty():
-            return repr(self._target)
+            return descriptor
 
-        return '%s\n\n%s' % (repr(self._target), repr(self._program))
+        return '%s\n\n%s' % (descriptor, '\n'.join(repr(c) for c in self._program.clauses))
 
     @property
     def clauses(self) -> Iterable[Clause]:

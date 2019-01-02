@@ -41,6 +41,8 @@ if __name__ == '__main__':
             Example({'X': 7, 'Y': 8}),
         ]
     )
+    print(problem)
+    print()
 
     hypothesis = problem.learn()
     for clause in hypothesis:
