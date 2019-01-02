@@ -4,7 +4,6 @@ from itertools import permutations
 from typing import Iterable
 from typing import List
 from typing import Optional
-from typing import Set
 from typing import Tuple
 
 from foil.unification import is_variable
@@ -14,45 +13,14 @@ from foil.unification import Variable
 _tabling = {}
 
 
-class Expand:
+def extract(target: 'Literal', body: List['Literal']) -> List['Variable']:
+    variables = []
+    for literal in [target, *body]:
+        for term in literal.terms:
+            if is_variable(term) and term not in variables:
+                variables.append(term)
 
-    def __init__(self, variables: Set[Variable], arity: int):
-        self._variables = tuple(variables)
-        self._arity = arity
-
-        self._combinations = combinations([v for v in range(arity + len(variables))] * arity, arity)
-        self._visited = {}
-
-    def __iter__(self):
-        self._visited = {}
-        return self
-
-    def __next__(self):
-        global _tabling
-
-        for combo in self._combinations:
-            if any(i < len(self._variables) for i in combo):
-                signature = _tabling \
-                    .setdefault(self._variables, {}) \
-                    .setdefault(self._arity, {}) \
-                    .setdefault(combo, self._as_terms(self._variables, combo))
-                if signature not in self._visited:
-                    return self._visited.setdefault(signature, list(signature))
-
-        raise StopIteration()
-
-    @staticmethod
-    def _as_terms(variables: Tuple[Variable], combination: Tuple[int, ...]) -> Tuple[Variable]:
-        terms = tuple()
-        i, table = 0, {i: v for i, v in enumerate(variables)}
-        for index in combination:
-            if index not in table:
-                while ('V%d' % i) in variables:
-                    i += 1
-                table[index] = 'V%d' % i
-            terms = (*terms, table[index])
-
-        return terms
+    return variables
 
 
 def closure(variables: List[Variable], constants: List[Value], examples: List['Example']) -> List['Example']:
@@ -134,11 +102,16 @@ def choose(
     from foil.models import Atom
     from foil.models import Literal
 
+    variables = []
+    for literal in [target, *body]:
+        for term in literal.terms:
+            if is_variable(term) and term not in variables:
+                variables.append(term)
+
     best_score, best_candidate, best_negatives = None, None, None
-    variables = {t for l in [target, *body] for t in l.terms if is_variable(t)}
     for mask in masks:
-        for terms in Expand(variables, mask.arity):
-            candidate = Literal(Atom(mask.functor, terms), mask.negated)
+        for items in itemize(variables, mask.arity):
+            candidate = Literal(Atom(mask.functor, items), mask.negated)
             if candidate != target and candidate not in body:
                 positives_i = covers(background, hypothesis, target, [*body, candidate], positives)
                 if best_score is not None and max_gain(positives, negatives, positives_i) < best_score:
@@ -154,6 +127,43 @@ def choose(
 
     # TODO check what is returned for positives and negatives (change again uncovers to covers?)
     return best_candidate, best_negatives
+
+
+def itemize(variables: List['Variable'], arity: int, cache: bool = True) -> Iterable[List['Term']]:
+    global _tabling_itemize
+
+    key = tuple(variables)
+    if cache and key in _tabling and arity in _tabling[key]:
+        return _tabling[key][arity]
+
+    size = len(variables)
+    values = [v for v in range(arity + size)] * arity
+    signatures = {as_terms(variables, c) for c in combinations(values, arity) if any(p < size for p in c)}
+    indexes = sorted([(
+        len(set(signature)),
+        sum(1 for v in set(signature) if v not in variables),
+        [size - variables.index(v) for v in signature if v in variables],
+        signature
+    ) for signature in signatures], reverse=True)
+    items = [i[-1] for i in indexes]
+
+    if not cache:
+        return items
+
+    return _tabling.setdefault(key, {}).setdefault(arity, items)
+
+
+def as_terms(variables: List[Variable], combination: Tuple[int, ...]) -> Tuple[Variable]:
+    terms = tuple()
+    i, table = 0, {i: v for i, v in enumerate(variables)}
+    for index in combination:
+        if index not in table:
+            while ('V%d' % i) in variables:
+                i += 1
+            table[index] = 'V%d' % i
+        terms = (*terms, table[index])
+
+    return terms
 
 
 def covers(
@@ -176,7 +186,9 @@ def covers(
         if example in covered \
                 or example.label is Label.NEGATIVE and fact in world \
                 or example.label is Label.POSITIVE and fact not in world:
-            covered.append(example)
+            continue
+
+        covered.append(example)
 
     return covered
 
@@ -207,14 +219,22 @@ def common(positives: Iterable['Example'], positives_i: Iterable['Example']) -> 
 
 
 def entropy(positives: Iterable['Example'], negatives: Iterable['Example']) -> float:
-    if not negatives or not positives:
+    num = sum(1 for e in positives)
+    den = num + sum(1 for e in negatives)
+    if den == 0 or num == den:
+        return 0.0
+
+    if den == 0 or num == den:
+        return 0
+
+    if num == 0:
         return math.inf
 
-    return -math.log2(len(list(positives)) / len([*positives, *negatives]))
+    return -math.log2(num / den)
 
 
 def foil(problem: 'Problem', cache: bool = True) -> List['Clause']:
-    global _tabling
+    global _tabling_itemize
 
     if cache and problem in _tabling:
         return _tabling[problem]
