@@ -2,10 +2,12 @@ import math
 from collections import namedtuple
 from itertools import combinations
 from itertools import permutations
+from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 Hypothesis = namedtuple('Hypothesis', ['clause', 'positives'])
 
@@ -82,6 +84,7 @@ def learn_clause(
         positives = result.positives
         negatives = result.negatives
 
+    print(len(positives), len(negatives))
     hypothesis = Hypothesis(Clause(target, body), positives)
     if not cache:
         return hypothesis
@@ -96,8 +99,6 @@ def is_over(
         body: List['Literal'],
         cache: bool = True,
 ) -> bool:
-    from foil.unification import is_variable
-
     global _tabling_over
 
     key = (target, tuple(body))
@@ -109,15 +110,11 @@ def is_over(
             return False
         return _tabling_over.setdefault(key, False)
 
-    count = {}
-    for literal in [target, *body]:
-        for term in literal.terms:
-            if is_variable(term):
-                count[term] = count.get(term, 0) + 1
+    frequencies = get_frequencies([target, *body], cache)
 
     if not cache:
-        return 1 not in count.values()
-    return _tabling_over.setdefault(key, 1 not in count.values())
+        return 1 not in frequencies.values()
+    return _tabling_over.setdefault(key, 1 not in frequencies.values())
 
 
 _tabling_literal = {}
@@ -150,28 +147,88 @@ def find_literal(
     for mask in masks:
         for items in itemize(variables, mask.arity):
             literal = Literal(Atom(mask.functor, items), mask.negated)
-            hypothesis = Clause(target, [*body, literal])
-            if literal != target \
-                    and literal not in body \
-                    and hypothesis not in hypotheses \
-                    and hypothesis not in excluded:
-                clauses = get_clauses(background, hypotheses, target, [*body, literal])
-                program = Program(clauses)
-                world = program.ground()
+            if not is_valid(hypotheses, excluded, target, body, literal):
+                continue
 
-                positives_i = [p for p in positives if p in world]
-                negatives_i = [n for n in negatives if n not in world]
-                if negatives_i == negatives:
-                    continue
+            clauses = get_clauses(background, hypotheses, target, [*body, literal])
+            program = Program(clauses)
+            world = program.ground()
 
-                score = gain(positives, negatives, positives_i, negatives_i)
-                print('\t\t', '%.3f' % score, len(positives_i), len(negatives_i), body, literal)
-                if candidate is None or score > candidate.score:
-                    candidate = Candidate(score, literal, positives_i, negatives_i)
+            positives_i = [p for p in positives if p in world]
+            negatives_i = [n for n in negatives if n not in world]
+            # if negatives_i == negatives:
+            #     continue
+
+            score = gain(positives, negatives, positives_i, negatives_i)
+            print('\t\t', '%.3f' % score, len(positives_i), len(negatives_i), body, literal)
+            if candidate is None or score > candidate.score:
+                candidate = Candidate(score, literal, positives_i, negatives_i)
 
     if not cache:
         return candidate
     return _tabling_literal.setdefault(key, candidate)
+
+
+_tabling_valid = {}
+
+
+def is_valid(
+        hypotheses: List['Clause'],
+        excluded: List['Clause'],
+        target: 'Literal',
+        body: List['Literal'],
+        literal: 'Literal',
+        cache: bool = True,
+) -> bool:
+    from foil.models import Clause
+
+    global _tabling_valid
+
+    key = (tuple(hypotheses), tuple(excluded), target, tuple(body), literal)
+    if cache and key in _tabling_valid:
+        return _tabling_valid[key]
+
+    if literal == target or simplify(target, body, literal) in simplify(target, body):
+        if not cache:
+            return False
+        return _tabling_valid.setdefault(key, False)
+
+    hypothesis = Clause(target, [*body, literal])
+    value = hypothesis not in hypotheses and not hypothesis in excluded
+
+    if not cache:
+        return value
+    return _tabling_valid.setdefault(key, value)
+
+
+_tabling_simplify = {}
+
+
+def simplify(
+        target: 'Literal',
+        body: List['Literal'],
+        literal: 'Literal' = None,
+        cache: bool = True,
+) -> Union['Literal', List['Literal']]:
+    global _tabling_simplify
+
+    if literal is None:
+        key = (target, tuple(body))
+    else:
+        key = (target, tuple(body), literal)
+    if cache and key in _tabling_simplify:
+        return _tabling_simplify[key]
+
+    if literal is None:
+        subst = {k: '_' for k, v in get_frequencies([target, *body], cache).items() if v == 1}
+        result = [target.substitute(subst), *[l.substitute(subst) for l in body]]
+    else:
+        subst = {k: '_' for k, v in get_frequencies([target, *body, literal], cache).items() if v == 1}
+        result = literal.substitute(subst)
+
+    if not cache:
+        return result
+    return _tabling_simplify.setdefault(key, result)
 
 
 _tabling_clauses = {}
@@ -273,6 +330,32 @@ def get_examples(
     return _tabling_examples.setdefault(key, (positives, negatives))
 
 
+_tabling_frequencies = {}
+
+
+def get_frequencies(
+        literals: List['Literal'],
+        cache: bool = True,
+) -> Dict['Variable', int]:
+    from foil.unification import is_variable
+
+    global _tabling_frequencies
+
+    key = tuple(literals)
+    if cache and key in _tabling_frequencies:
+        return _tabling_frequencies[key]
+
+    frequencies = {}
+    for literal in literals:
+        for term in literal.terms:
+            if is_variable(term):
+                frequencies[term] = frequencies.get(term, 0) + 1
+
+    if not cache:
+        return frequencies
+    return _tabling_frequencies.setdefault(key, frequencies)
+
+
 _tabling_masks = {}
 
 
@@ -292,6 +375,7 @@ def get_masks(
         return _tabling_masks[key]
 
     masks = []
+    # for literal in [target, *[l for c in background for l in c.literals]]:
     for literal in [*[l for c in background for l in c.literals], target]:
         mask = literal.get_mask()
         if mask not in masks:
@@ -412,7 +496,7 @@ def gain(
 
     information = entropy(positives, negatives)
     information_i = entropy(positives_i, negatives_i)
-    difference = information_i - information
+    difference = information - information_i
     value = common * difference
 
     if not cache:

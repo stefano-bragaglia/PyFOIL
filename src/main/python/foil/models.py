@@ -459,6 +459,7 @@ class Problem:
         from foil.learning import learn_hypotheses
 
         masks = get_masks(list(self._program.clauses), self._target)
+        print(masks)
         positives, negatives = get_examples(list(self._program.clauses), self._target, list(self._examples))
         print(len(positives), len(negatives))
 

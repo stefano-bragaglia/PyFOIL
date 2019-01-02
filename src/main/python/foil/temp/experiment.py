@@ -42,9 +42,9 @@ if __name__ == '__main__':
         ]
     )
     print(problem)
-    print()
-
+    print('-' * 120)
     hypothesis = problem.learn()
+    print('-' * 120)
     for clause in hypothesis:
         print(clause)
 
