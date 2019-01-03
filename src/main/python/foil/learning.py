@@ -131,7 +131,6 @@ def find_literal(
         cache: bool = True,
 ) -> Optional[Candidate]:
     from foil.models import Atom
-    from foil.models import Clause
     from foil.models import Literal
     from foil.models import Program
 
