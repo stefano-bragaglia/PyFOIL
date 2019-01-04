@@ -1,7 +1,7 @@
+from foil.learning import learn_hypotheses
 from foil.models import Clause
+from foil.models import Example
 from foil.models import Literal
-
-from foil.temp.learning import learn_hypotheses
 
 if __name__ == '__main__':
     target = Literal.parse('path(X,Y)')
@@ -17,7 +17,7 @@ if __name__ == '__main__':
         Clause.parse('edge(7,6).'),
         Clause.parse('edge(7,8).'),
     ]
-    positives = [
+    examples = [Example(a) for a in [
         {'X': 0, 'Y': 1},
         {'X': 0, 'Y': 2},
         {'X': 0, 'Y': 3},
@@ -37,8 +37,7 @@ if __name__ == '__main__':
         {'X': 6, 'Y': 8},
         {'X': 7, 'Y': 6},
         {'X': 7, 'Y': 8},
-    ]
-    negatives = [{'X': x, 'Y': y} for x in range(9) for y in range(9) if {'X': x, 'Y': y} not in positives]
+    ]]
 
-    for hypothesis in learn_hypotheses(target, background, positives, negatives):
+    for hypothesis in learn_hypotheses(target, background, examples):
         print(hypothesis)

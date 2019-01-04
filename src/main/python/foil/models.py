@@ -454,13 +454,6 @@ class Problem:
         return self._program.ground()
 
     def learn(self) -> List[Clause]:
-        from foil.learning import get_examples
-        from foil.learning import get_masks
         from foil.learning import learn_hypotheses
 
-        masks = get_masks(list(self._program.clauses), self._target)
-        print(masks)
-        positives, negatives = get_examples(list(self._program.clauses), self._target, list(self._examples))
-        print(len(positives), len(negatives))
-
-        return learn_hypotheses(list(self._program.clauses), self._target, masks, positives, negatives)
+        return learn_hypotheses(self._target, list(self.program.clauses), list(self._examples))

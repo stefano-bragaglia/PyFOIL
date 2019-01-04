@@ -312,3 +312,51 @@ def get_variables(
         return variables
 
     return _tabling_variables.setdefault(key, variables)
+
+
+_tabling_examples = {}
+
+
+def get_examples(
+        target: 'Literal',
+        background: List['Clause'],
+        constants: List['Value'],
+        examples: List['Example'],
+        cache: bool = True,
+) -> Tuple[List['Literal'], List['Literal']]:
+    from foil.models import Label
+    from foil.models import Program
+    from foil.unification import is_variable
+
+    global _tabling_examples
+
+    key = (target, tuple(background), tuple(constants), tuple(examples))
+    if cache and key in _tabling_examples:
+        return _tabling_examples[key]
+
+    positives, negatives = [], []
+    for example in examples:
+        literal = target.substitute(example.assignment)
+        if example.label == Label.POSITIVE and example.assignment not in positives:
+            positives.append(example.assignment)
+        if example.label == Label.NEGATIVE and example.assignment not in negatives:
+            positives.append(example.assignment)
+
+    world = Program(background).ground()
+    constants = get_constants(background, target, cache)
+    variables = sorted({t for t in target.terms if is_variable(t)})
+    size = len(variables)
+    for combination in {c for c in combinations(constants * size, size)}:
+        assignment = dict(zip(variables, combination))
+        literal = target.substitute(assignment)
+        if literal in world:
+            if assignment not in positives:
+                positives.append(assignment)
+        else:
+            if assignment not in negatives:
+                negatives.append(assignment)
+
+    if not cache:
+        return positives, negatives
+
+    return _tabling_examples.setdefault(key, (positives, negatives))
