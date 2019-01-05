@@ -26,6 +26,12 @@ def learn_hypotheses(
     masks = get_masks(background, target, cache)
     constants = get_constants(background, target, cache)
     positives, negatives = get_examples(target, background, constants, examples, cache)
+    for p in sorted(positives):
+        print(p)
+    print()
+    for n in sorted(negatives):
+        print(n)
+    print()
     while positives:
         result = learn_clause(hypotheses, target, background, masks, constants, positives, negatives, cache)
         if result is None:

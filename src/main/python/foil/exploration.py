@@ -46,22 +46,33 @@ def find_candidate(
 
     candidate = None
     bound = max_gain(len(positives), len(negatives))
+    print('-' * 120)
+    print(target, ':-', body, ':', len(positives), len(negatives), '/', '%.3f' % bound)
+    print('-' * 120)
     variables = get_variables(target, body, cache)
     for mask in masks:
         for items in itemize(variables, mask.arity, cache):
-            if all(v not in variables for v in items):
-                continue
-
             literal = Literal(Atom(mask.functor, items), mask.negated)
             world = Program([*hypotheses, Clause(target, [*body, literal]), *background]).ground()
             positives_i = expand(positives, target, body, literal, constants, world, False)
             negatives_i = expand(negatives, target, body, literal, constants, world, True)
             score = gain(len(positives), len(negatives), len(positives_i), len(negatives_i))
             if score > bound:
+                print(' ', 'Skip:', target, ':-', body, literal, ':', len(positives_i), len(negatives_i), '/',
+                      '%.3f' % score)
                 continue
 
             if candidate is None or score > candidate.score:
+                print('*', target, ':-', body, literal, ':', len(positives_i), len(negatives_i), '/', '%.3f' % score,
+                      '+')
                 candidate = Candidate(score, literal, positives_i, negatives_i)
+            else:
+                print('*', target, ':-', body, literal, ':', len(positives_i), len(negatives_i), '/', '%.3f' % score)
+
+    print('-' * 120)
+    print('>>>>>', target, ':-', body, candidate.literal, ':', len(candidate.positives), len(candidate.negatives), '/',
+          candidate.score)
+    print('-' * 120)
 
     if not cache:
         return candidate
@@ -85,11 +96,18 @@ def itemize(
 
     size = len(variables)
     values = [v for v in range(arity + size)] * arity
-
-    items = []
+    groups = []
     for combination in combinations(values, arity):
         if any(position < size for position in combination):
-            items.append(get_items(variables, combination))
+            terms = get_items(variables, combination)
+            if terms not in groups:
+                groups.append(terms)
+    ranking = []
+    for terms in groups:
+        unique = len(set(terms)) + arity + size - 1
+        novels = len({t for t in terms if t not in variables})
+        ranking.append((unique, novels, terms))
+    items = [pos[-1] for pos in sorted(ranking, reverse=True)]
 
     if not cache:
         return items
@@ -227,136 +245,76 @@ def get_expansion(
     return _tabling_expansion.setdefault(key, expansion)
 
 
-_tabling_masks = {}
+# ----------------------------------------------------------------------------------------------------------------------
+
+def get_assignments(examples: List['Example']) -> Tuple[List['Assignment'], List['Assignment']]:
+    from foil.models import Label
+
+    pos, neg = [], []
+    for example in examples:
+        if example.label == Label.POSITIVE and example.assignment not in pos:
+            pos.append(example.assignment)
+        if example.label == Label.NEGATIVE and example.assignment not in neg:
+            neg.append(example.assignment)
+
+    return sort(pos), sort(neg)
 
 
-def get_masks(
-        background: List['Clause'],
+def get_closure(
+        world: List['Literal'],
+        constants: List['Value'],
         target: 'Literal',
-        cache: bool = True,
-) -> List['Mask']:
-    from foil.models import Clause
-    from foil.models import Program
+        pos: List['Assignment'],
+        neg: List['Assignment'],
+) -> Tuple[List['Assignment'], List['Assignment']]:
+    from foil.unification import is_variable
 
-    global _tabling_masks
+    variables = sorted({t for t in target.terms if is_variable(t)})
+    n_variables = len(variables)
+    for combination in {c for c in combinations(constants * n_variables, n_variables)}:
+        assignment = dict(zip(variables, combination))
+        literal = target.substitute(assignment)
+        if literal in world and assignment not in pos:
+            pos.append(assignment)
+        if literal not in world and assignment not in pos and assignment not in neg:
+            neg.append(assignment)
 
-    candidate = Clause(target)
-    key = Program([candidate, *background])
-    if cache and key in _tabling_masks:
-        return _tabling_masks[key]
+    return sort(pos), sort(neg)
 
+
+def get_masks(literals: List['Literal']) -> List['Mask']:
     masks = []
-    for literal in [*[l for c in background for l in c.literals], target]:
+    for literal in literals:
         mask = literal.get_mask()
         if mask not in masks:
             masks.append(mask)
 
-    if not cache:
-        return masks
-
-    return _tabling_masks.setdefault(key, masks)
+    return masks
 
 
-_tabling_items = {}
-
-
-def get_items(
-        variables: List['Variable'],
-        combination: Tuple[int, ...],
-        cache: bool = True,
-) -> List['Variable']:
-    global _tabling_items
-
-    key = (tuple(variables), combination)
-    if cache and key in _tabling_items:
-        return _tabling_items[key]
-
-    terms = []
-    i, table = 0, {i: v for i, v in enumerate(variables)}
+def get_signature(variables: List['Variable'], combination: Tuple[int, ...]) -> List['Variable']:
+    signature, i, table = [], 0, {i: v for i, v in enumerate(variables)}
     for index in combination:
         if index not in table:
             while ('V%d' % i) in variables:
                 i += 1
             table[index] = 'V%d' % i
-        terms.append(table[index])
+        signature.append(table[index])
 
-    if not cache:
-        return terms
-
-    return _tabling_items.setdefault(key, terms)
+    return signature
 
 
-_tabling_variables = {}
-
-
-def get_variables(
-        target: 'Literal',
-        body: List['Literal'],
-        cache: bool = True,
-) -> List['Variable']:
+def get_variables(literals: List['Literal']) -> List['Variable']:
     from foil.unification import is_variable
 
-    global _tabling_variables
-
-    key = (target, tuple(body))
-    if cache and key in _tabling_variables:
-        return _tabling_variables[key]
-
     variables = []
-    for literal in [target, *body]:
+    for literal in literals:
         for term in literal.terms:
             if is_variable(term) and term not in variables:
                 variables.append(term)
 
-    if not cache:
-        return variables
-
-    return _tabling_variables.setdefault(key, variables)
+    return variables
 
 
-_tabling_examples = {}
-
-
-def get_examples(
-        target: 'Literal',
-        background: List['Clause'],
-        constants: List['Value'],
-        examples: List['Example'],
-        cache: bool = True,
-) -> Tuple[List['Literal'], List['Literal']]:
-    from foil.models import Label
-    from foil.models import Program
-    from foil.unification import is_variable
-
-    global _tabling_examples
-
-    key = (target, tuple(background), tuple(constants), tuple(examples))
-    if cache and key in _tabling_examples:
-        return _tabling_examples[key]
-
-    positives, negatives = [], []
-    for example in examples:
-        literal = target.substitute(example.assignment)
-        if example.label == Label.POSITIVE and example.assignment not in positives:
-            positives.append(example.assignment)
-        if example.label == Label.NEGATIVE and example.assignment not in negatives:
-            positives.append(example.assignment)
-
-    world = Program(background).ground()
-    constants = get_constants(background, target, cache)
-    variables = sorted({t for t in target.terms if is_variable(t)})
-    size = len(variables)
-    for combination in {c for c in combinations(constants * size, size)}:
-        assignment = dict(zip(variables, combination))
-        literal = target.substitute(assignment)
-        if literal in world:
-            if assignment not in positives:
-                positives.append(assignment)
-        else:
-            if assignment not in negatives:
-                negatives.append(assignment)
-
-    if not cache:
-        return positives, negatives
-
-    return _tabling_examples.setdefault(key, (positives, negatives))
+def sort(assignments: List['Assignment']) -> List['Assignment']:
+    return [e[-1] for e in sorted((*[(k, v) for k, v in sorted(a.items())], a) for a in assignments)]
