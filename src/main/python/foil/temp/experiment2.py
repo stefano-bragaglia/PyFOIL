@@ -1,3 +1,4 @@
+from foil.exploration import learn_hypotheses
 from foil.models import Clause
 from foil.models import Example
 from foil.models import Literal
@@ -39,18 +40,5 @@ if __name__ == '__main__':
         {'X': 7, 'Y': 8},
     ]]
 
-    # for hypothesis in learn_hypotheses(target, background, examples):
-    #     print(hypothesis)
-
-    clauses = [
-        Clause.parse('path(X,Y) :- edge(X,Y).'),
-        Clause.parse('path(X,Y) :- edge(X,V0), edge(V0,Y).'),
-        Clause.parse('edge(0,1).'), Clause.parse('edge(0,3).'), Clause.parse('edge(1,2).'),
-        Clause.parse('edge(3,2).'), Clause.parse('edge(3,4).'), Clause.parse('edge(4,5).'),
-        Clause.parse('edge(4,6).'), Clause.parse('edge(6,8).'), Clause.parse('edge(7,6).'),
-        Clause.parse('edge(7,8).'),
-    ]
-    for literal in sorted(Program(clauses).ground(), key=lambda x: repr(x)):
-        print(literal)
-    print()
-
+    for hypothesis in learn_hypotheses(target, background, examples):
+        print(hypothesis)
