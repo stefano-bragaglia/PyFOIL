@@ -109,9 +109,11 @@ class Leaf:
 
 
 class Engine:
-    _nodes = {}
-    _agenda = []
-    _root = Root()
+
+    def __init__(self):
+        self._nodes = {}
+        self._agenda = []
+        self._root = Root()
 
     @property
     def clauses(self) -> Iterable[Clause]:
@@ -144,15 +146,8 @@ class Engine:
         self._root.notify(fact.head)
 
 
-_tabling = {}
-
-
-def ground(program: Program, cache: bool = True) -> List[Literal]:
-    global _tabling
-
-    if cache and program in _tabling:
-        return _tabling[program]
-
+# @Tabling
+def ground(program: Program) -> List[Literal]:
     engine = Engine()
     for clause in program.clauses:
         engine.load(clause)
@@ -160,7 +155,4 @@ def ground(program: Program, cache: bool = True) -> List[Literal]:
     for fact in program.get_facts():
         engine.insert(fact)
 
-    if not cache:
-        return list(engine.facts)
-
-    return _tabling.setdefault(program, list(engine.facts))
+    return list(engine.facts)

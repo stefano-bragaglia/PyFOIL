@@ -1,5 +1,6 @@
 from collections import namedtuple
 from itertools import combinations
+from itertools import permutations
 from typing import List
 from typing import Optional
 from typing import Set
@@ -17,8 +18,8 @@ def find_literal(
         background: List['Clause'],
         masks: List['Mask'],
         constants: List['Value'],
-        positives: List['Substitution'],
-        negatives: List['Substitution'],
+        pos: List['Substitution'],
+        neg: List['Substitution'],
 ) -> Optional[Candidate]:
     from foil.heuristic import gain
     from foil.heuristic import max_gain
@@ -27,10 +28,10 @@ def find_literal(
     from foil.models import Literal
     from foil.models import Program
 
-    candidate, bound = None, max_gain(len(positives), len(negatives))
+    candidate, bound = None, max_gain(len(pos), len(neg))
 
     print('-' * 120)
-    print(target, ':-', body, ':', len(positives), len(negatives), '/', '%.3f' % bound)
+    print(target, ':-', body, ':', len(pos), len(neg), '/', '%.3f' % bound)
     print('-' * 120)
 
     variables = get_variables([target, *body])
@@ -41,24 +42,25 @@ def find_literal(
 
             # TODO
             world = Program([*hypotheses, Clause(target, [*body, literal]), *background]).ground()
-            positives_i = expand(positives, target, body, literal, constants, world, False)
-            negatives_i = expand(negatives, target, body, literal, constants, world, True)
-            score = gain(len(positives), len(negatives), len(positives_i), len(negatives_i))
+            pos_i = expand(target, body, literal, world, constants, pos)
+            # pos_i = pos
+            # pos_i = [s for s in pos if target.substitute(s) not in world]
+            neg_i = expand(target, body, literal, world, constants, neg)
+            score = gain(len(pos), len(neg), len(pos_i), len(neg_i))
             if score > bound:
-                print(' ', 'Skip:', target, ':-', body, literal, ':', len(positives_i), len(negatives_i), '/',
+                print(' ', 'Skip:', target, ':-', body, literal, ':', len(pos_i), len(neg_i), '/',
                       '%.3f' % score)
                 continue
 
             if candidate is None or score > candidate.score:
-                print('*', target, ':-', body, literal, ':', len(positives_i), len(negatives_i), '/', '%.3f' % score,
+                print('*', target, ':-', body, literal, ':', len(pos_i), len(neg_i), '/', '%.3f' % score,
                       '+')
-                candidate = Candidate(score, literal, positives_i, negatives_i)
+                candidate = Candidate(score, literal, pos_i, neg_i)
             else:
-                print('*', target, ':-', body, literal, ':', len(positives_i), len(negatives_i), '/', '%.3f' % score)
+                print('*', target, ':-', body, literal, ':', len(pos_i), len(neg_i), '/', '%.3f' % score)
 
     print('-' * 120)
-    print('>>>>>', target, ':-', body, candidate.literal, ':', len(candidate.positives), len(candidate.negatives), '/',
-          candidate.score)
+    print('>>>>>', target, ':-', body, candidate.literal, ':', len(candidate.pos), len(candidate.neg), '/', candidate.score)
     print('-' * 120)
 
     return candidate
@@ -121,13 +123,16 @@ def get_expansion(
     if not free_variables:
         return substitutions
 
+    size = len(free_variables)
+    complements = [dict(zip(free_variables, p)) for p in {p for p in permutations(constants * size, size)}]
+
     expansion = []
-    for subst in substitutions:
-        for variable in free_variables:
-            for constant in constants:
-                expand = {**subst, variable: constant}
-                if literal.substitute(expand) in world:
-                    expansion.append(expand)
+    for substitution in substitutions:
+        for complement in complements:
+            expand = {**substitution, **complement}
+            candidate = literal.substitute(expand)
+            if candidate in world:
+                expansion.append(expand)
 
     return expansion
 
@@ -192,8 +197,6 @@ def expand(
         return []
 
     free_variables = get_free_variables([target, *body, literal], substitutions[0])
-    if not free_variables:
-        return substitutions
 
     return get_expansion(literal, world, free_variables, constants, substitutions)
 
