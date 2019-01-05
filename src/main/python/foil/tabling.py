@@ -22,6 +22,13 @@ class Tabling:
 
 
 @Tabling
+def get_constants(target: 'Literal', background: List['Clause']) -> List['Value']:
+    from foil.exploration import get_constants
+
+    return get_constants([target, *[l for c in background for l in c.literals]])
+
+
+@Tabling
 def get_examples(
         world: List['Literal'],
         constants: List['Value'],
@@ -49,3 +56,10 @@ def get_variables(target: 'Literal', body: List['Literal']) -> List['Variable']:
     from foil.exploration import get_variables
 
     return get_variables([target, *body])
+
+
+@Tabling
+def itemize(variables: List['Variable'], arity: int) -> List[List['Variable']]:
+    from foil.exploration import itemize
+
+    return itemize(variables, arity)

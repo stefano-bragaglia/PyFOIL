@@ -6,12 +6,58 @@ from foil.models import Clause
 from foil.models import Example
 from foil.models import Literal
 from foil.models import Mask
+from foil.tabling import get_constants
 from foil.tabling import get_examples
 from foil.tabling import get_masks
 from foil.tabling import get_variables
+from foil.tabling import itemize
 
 
 class TablingTest(TestCase):
+
+    def test__get_constants(self):
+        for i, entry in enumerate([
+            (
+                    Literal.parse('path(X,Y)'),
+                    [
+                        Clause.parse('edge(0,1).'),
+                        Clause.parse('edge(0,3).'),
+                        Clause.parse('edge(1,2).'),
+                        Clause.parse('edge(3,2).'),
+                        Clause.parse('edge(3,4).'),
+                        Clause.parse('edge(4,5).'),
+                        Clause.parse('edge(4,6).'),
+                        Clause.parse('edge(6,8).'),
+                        Clause.parse('edge(7,6).'),
+                        Clause.parse('edge(7,8).'),
+                    ],
+                    [0, 1, 2, 3, 4, 5, 6, 7, 8],
+            ),
+            (
+                    Literal.parse('path(X,Y)'),
+                    [
+                        Clause.parse('edge(0,1).'),
+                        Clause.parse('edge(0,3).'),
+                        Clause.parse('edge(1,2).'),
+                        Clause.parse('edge(3,2).'),
+                        Clause.parse('edge(3,4).'),
+                        Clause.parse('edge(4,5).'),
+                        Clause.parse('edge(4,6).'),
+                        Clause.parse('edge(6,8).'),
+                        Clause.parse('edge(7,6).'),
+                        Clause.parse('edge(7,8).'),
+                    ],
+                    [0, 1, 2, 3, 4, 5, 6, 7, 8],
+            ),
+        ]):
+            target, background, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = get_constants(target, background)
+
+                assert_that(
+                    result,
+                    'get_constants(literals: List[Literal]) -> List[Value]',
+                ).is_equal_to(expected)
 
     def test__get_examples(self):
         for i, entry in enumerate([
@@ -320,4 +366,64 @@ class TablingTest(TestCase):
                 assert_that(
                     result,
                     'get_variables(literals: List[Literal]) -> List[Variable]',
+                ).is_equal_to(expected)
+
+    def test__itemize(self):
+        for i, entry in enumerate([
+            (['X'], 1, [['X']]),
+            (['X'], 2, [['V0', 'X'], ['X', 'V0'], ['X', 'X']]),
+            (['X'], 3, [
+                ['V0', 'V0', 'X'],
+                ['V0', 'V1', 'X'],
+                ['V0', 'X', 'V0'],
+                ['V0', 'X', 'V1'],
+                ['V0', 'X', 'X'],
+                ['X', 'V0', 'V0'],
+                ['X', 'V0', 'V1'],
+                ['X', 'V0', 'X'],
+                ['X', 'X', 'V0'],
+                ['X', 'X', 'X'],
+            ]),
+            (['X', 'Y'], 2, [
+                ['V0', 'X'],
+                ['V0', 'Y'],
+                ['X', 'V0'],
+                ['X', 'X'],
+                ['X', 'Y'],
+                ['Y', 'V0'],
+                ['Y', 'X'],
+                ['Y', 'Y'],
+            ]),
+            (['X'], 1, [['X']]),
+            (['X'], 2, [['V0', 'X'], ['X', 'V0'], ['X', 'X']]),
+            (['X'], 3, [
+                ['V0', 'V0', 'X'],
+                ['V0', 'V1', 'X'],
+                ['V0', 'X', 'V0'],
+                ['V0', 'X', 'V1'],
+                ['V0', 'X', 'X'],
+                ['X', 'V0', 'V0'],
+                ['X', 'V0', 'V1'],
+                ['X', 'V0', 'X'],
+                ['X', 'X', 'V0'],
+                ['X', 'X', 'X'],
+            ]),
+            (['X', 'Y'], 2, [
+                ['V0', 'X'],
+                ['V0', 'Y'],
+                ['X', 'V0'],
+                ['X', 'X'],
+                ['X', 'Y'],
+                ['Y', 'V0'],
+                ['Y', 'X'],
+                ['Y', 'Y'],
+            ]),
+        ]):
+            variables, arity, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = itemize(variables, arity)
+
+                assert_that(
+                    result,
+                    'itemize(variables: List[Variable], arity: int) -> List[List[Variable]]',
                 ).is_equal_to(expected)

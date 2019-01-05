@@ -1,17 +1,16 @@
 from collections import namedtuple
 from itertools import combinations
-from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
 
-Candidate = namedtuple('Candidate', ['score', 'literal', 'positives', 'negatives'])
-
-_tabling_candidates = {}
+Candidate = namedtuple('Candidate', ['score', 'literal', 'pos', 'neg'])
 
 
-def find_candidate(
+# ----------------------------------------------------------------------------------------------------------------------
+
+def find_literal(
         hypotheses: List['Clause'],
         target: 'Literal',
         body: List['Literal'],
@@ -20,7 +19,6 @@ def find_candidate(
         constants: List['Value'],
         positives: List['Substitution'],
         negatives: List['Substitution'],
-        cache: bool = True,
 ) -> Optional[Candidate]:
     from foil.heuristic import gain
     from foil.heuristic import max_gain
@@ -29,30 +27,19 @@ def find_candidate(
     from foil.models import Literal
     from foil.models import Program
 
-    global _tabling_candidates
+    candidate, bound = None, max_gain(len(positives), len(negatives))
 
-    key = (
-        tuple(hypotheses),
-        target,
-        tuple(body),
-        tuple(background),
-        tuple(masks),
-        tuple(constants),
-        tuple((k, v) for p in positives for k, v in p.items()),
-        tuple((k, v) for n in negatives for k, v in n.items())
-    )
-    if cache and key in _tabling_candidates:
-        return _tabling_candidates[key]
-
-    candidate = None
-    bound = max_gain(len(positives), len(negatives))
     print('-' * 120)
     print(target, ':-', body, ':', len(positives), len(negatives), '/', '%.3f' % bound)
     print('-' * 120)
-    variables = get_variables(target, body, cache)
+
+    variables = get_variables([target, *body])
+
     for mask in masks:
-        for items in itemize(variables, mask.arity, cache):
+        for items in itemize(variables, mask.arity):
             literal = Literal(Atom(mask.functor, items), mask.negated)
+
+            # TODO
             world = Program([*hypotheses, Clause(target, [*body, literal]), *background]).ground()
             positives_i = expand(positives, target, body, literal, constants, world, False)
             negatives_i = expand(negatives, target, body, literal, constants, world, True)
@@ -74,178 +61,8 @@ def find_candidate(
           candidate.score)
     print('-' * 120)
 
-    if not cache:
-        return candidate
+    return candidate
 
-    return _tabling_candidates.setdefault(key, candidate)
-
-
-_tabling_items = {}
-
-
-def itemize(
-        variables: List['Variable'],
-        arity: int,
-        cache: bool = True,
-) -> Iterable[List['Variable']]:
-    global _tabling_items
-
-    key = (tuple(variables), arity)
-    if cache and key in _tabling_items:
-        return _tabling_items[key]
-
-    size = len(variables)
-    values = [v for v in range(arity + size)] * arity
-    groups = []
-    for combination in combinations(values, arity):
-        if any(position < size for position in combination):
-            terms = get_items(variables, combination)
-            if terms not in groups:
-                groups.append(terms)
-    ranking = []
-    for terms in groups:
-        unique = len(set(terms)) + arity + size - 1
-        novels = len({t for t in terms if t not in variables})
-        ranking.append((unique, novels, terms))
-    items = [pos[-1] for pos in sorted(ranking, reverse=True)]
-
-    if not cache:
-        return items
-
-    return _tabling_items.setdefault(key, items)
-
-
-_tabling_expand = {}
-
-
-def expand(
-        substitutions: List['Substitution'],
-        target: 'Literal',
-        body: List['Literal'],
-        candidate: 'Literal',
-        constants: List['Value'],
-        world: List['Literal'],
-        update: bool,
-        cache: bool = True,
-) -> List['Substitution']:
-    global _tabling_expand
-
-    key = (tuple((k, v) for s in substitutions for k, v in s.items()),
-           target, tuple(body), candidate, tuple(constants), tuple(world), update)
-    if cache and key in _tabling_expand:
-        return _tabling_expand[key]
-
-    if not substitutions:
-        if not cache:
-            return []
-
-        return _tabling_expand.setdefault(key, [])
-
-    variables = get_free_variables([target, *body, candidate], substitutions[0], cache)
-    if not variables:
-        if not cache:
-            return substitutions
-
-        return _tabling_expand.setdefault(key, substitutions)
-
-    if update:
-        substitutions = [s for s in substitutions if target.substitute(s) not in world]
-    expansion = get_expansion(substitutions, variables, constants, candidate, world, cache)
-
-    if not cache:
-        return expansion
-
-    return _tabling_expand.setdefault(key, expansion)
-
-
-_tabling_constants = {}
-
-
-def get_constants(
-        background: List['Clause'],
-        target: 'Literal',
-        cache: bool = True,
-) -> List['Value']:
-    from foil.unification import is_ground
-
-    key = (tuple(background), target)
-    if cache and key in _tabling_constants:
-        return _tabling_constants[key]
-
-    constants = []
-    for literal in [target, *[l for c in background for l in c.literals]]:
-        for term in literal.terms:
-            if is_ground(term) and term not in constants:
-                constants.append(term)
-
-    if not cache:
-        return constants
-
-    return _tabling_constants.setdefault(key, constants)
-
-
-_tabling_free_variables = {}
-
-
-def get_free_variables(
-        literals: List['Literal'],
-        subst: 'Substitution',
-        cache: bool = True,
-) -> Set['Variable']:
-    from foil.unification import is_variable
-
-    global _tabling_free_variables
-
-    key = (tuple(literals), tuple((k, v) for k, v in subst.items()))
-    if cache and key in _tabling_free_variables:
-        return _tabling_free_variables[key]
-
-    free_variables = set()
-    for literal in literals:
-        literal = literal.substitute(subst)
-        for term in literal.terms:
-            if is_variable(term):
-                free_variables.add(term)
-
-    if not cache:
-        return free_variables
-
-    return _tabling_free_variables.setdefault(key, free_variables)
-
-
-_tabling_expansion = {}
-
-
-def get_expansion(
-        substitutions: List['Substitution'],
-        variables: Set['Variable'],
-        constants: List['Value'],
-        candidate: 'Literal',
-        world: List['Literal'],
-        cache: bool = True,
-) -> List['Substitution']:
-    global _tabling_expansion
-
-    key = (tuple((k, v) for s in substitutions for k, v in s.items()),
-           tuple(sorted(variables)), tuple(constants), candidate, tuple(world))
-    if cache in key in _tabling_expansion:
-        return _tabling_expansion[key]
-
-    expansion = []
-    for substitution in substitutions:
-        for variable in variables:
-            for constant in constants:
-                expand = {**substitution, variable: constant}
-                if candidate.substitute(expand) in world:
-                    expansion.append(expand)
-
-    if not cache:
-        return expansion
-
-    return _tabling_expansion.setdefault(key, expansion)
-
-
-# ----------------------------------------------------------------------------------------------------------------------
 
 def get_assignments(examples: List['Example']) -> Tuple[List['Assignment'], List['Assignment']]:
     from foil.models import Label
@@ -282,6 +99,52 @@ def get_closure(
     return sort(pos), sort(neg)
 
 
+def get_constants(literals: List['Literal']) -> List['Value']:
+    from foil.unification import is_ground
+
+    constants = []
+    for literal in literals:
+        for term in literal.terms:
+            if is_ground(term) and term not in constants:
+                constants.append(term)
+
+    return sorted(constants, key=lambda x: repr(x))
+
+
+def get_expansion(
+        literal: 'Literal',
+        world: List['Literal'],
+        free_variables: Set['Variable'],
+        constants: List['Value'],
+        substitutions: List['Substitution'],
+) -> List['Substitution']:
+    if not free_variables:
+        return substitutions
+
+    expansion = []
+    for subst in substitutions:
+        for variable in free_variables:
+            for constant in constants:
+                expand = {**subst, variable: constant}
+                if literal.substitute(expand) in world:
+                    expansion.append(expand)
+
+    return expansion
+
+
+def get_free_variables(literals: List['Literal'], subst: 'Substitution') -> Set['Variable']:
+    from foil.unification import is_variable
+
+    free_variables = set()
+    for literal in literals:
+        literal = literal.substitute(subst)
+        for term in literal.terms:
+            if is_variable(term):
+                free_variables.add(term)
+
+    return free_variables
+
+
 def get_masks(literals: List['Literal']) -> List['Mask']:
     masks = []
     for literal in literals:
@@ -296,7 +159,7 @@ def get_signature(variables: List['Variable'], combination: Tuple[int, ...]) -> 
     signature, i, table = [], 0, {i: v for i, v in enumerate(variables)}
     for index in combination:
         if index not in table:
-            while ('V%d' % i) in variables:
+            while ('V%d' % i) in table.values():
                 i += 1
             table[index] = 'V%d' % i
         signature.append(table[index])
@@ -314,6 +177,48 @@ def get_variables(literals: List['Literal']) -> List['Variable']:
                 variables.append(term)
 
     return variables
+
+
+def expand(
+        target: 'Literal',
+        body: List['Literal'],
+        literal: 'Literal',
+        world: List['Literal'],
+        constants: List['Value'],
+        substitutions: List['Substitution'],
+) -> List['Substitution']:
+    substitutions = [s for s in substitutions if target.substitute(s) not in world]
+    if not substitutions:
+        return []
+
+    free_variables = get_free_variables([target, *body, literal], substitutions[0])
+    if not free_variables:
+        return substitutions
+
+    return get_expansion(literal, world, free_variables, constants, substitutions)
+
+
+def itemize(variables: List['Variable'], arity: int) -> List[List['Variable']]:
+    size = len(variables)
+    values = [v for v in range(arity + size)] * arity
+    signatures = []
+    for combination in combinations(values, arity):
+        if any(position < size for position in combination):
+            signature = get_signature(variables, combination)
+            if signature not in signatures:
+                signatures.append(signature)
+
+    # TODO I don't think ordering is needed. Delete?
+    # ranking = []
+    # for signature in signatures:
+    #     novel = len({t for t in signature if t not in variables})
+    #     free = sum(1 for t in signature if t not in variables)
+    #     count = len({t for t in signature})
+    #     index = tuple(size - variables.index(t) for t in signature if t in variables)
+    #     ranking.append((novel, free, count, index, signature))
+    # signatures = [i[-1] for i in sorted(ranking, reverse=True)]
+
+    return sorted(signatures)
 
 
 def sort(assignments: List['Assignment']) -> List['Assignment']:
