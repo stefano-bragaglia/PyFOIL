@@ -27,8 +27,3 @@ def entropy(pos: int, neg: int) -> float:  # yet to cover pos,  yet to cover neg
         return math.inf
 
     return -math.log2(pos / (pos + neg))
-
-
-if __name__ == '__main__':
-    e2 = entropy(18, 54)
-    e3 = entropy(10, 0)
