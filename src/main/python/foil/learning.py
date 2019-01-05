@@ -62,9 +62,6 @@ def learn_clause(
     return hypothesis
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-
-
 def find_literal(
         hypotheses: List['Clause'],
         target: 'Literal',
@@ -84,39 +81,34 @@ def find_literal(
 
     candidate, bound = None, max_gain(len(pos), len(neg))
 
-    print('-' * 120)
-    print(target, ':-', body, ':', len(pos), len(neg), '/', '%.3f' % bound)
-    print('-' * 120)
+    # print('-' * 120)
+    # print(target, ':-', body, ':', len(pos), len(neg), '/', '%.3f' % bound)
+    # print('-' * 120)
 
     variables = get_variables([target, *body])
-
     for mask in masks:
         for items in itemize(variables, mask.arity):
             literal = Literal(Atom(mask.functor, items), mask.negated)
-
-            # TODO
             world = Program([*hypotheses, Clause(target, [*body, literal]), *background]).ground()
             pos_i = expand(target, body, literal, world, constants, pos)
-            # pos_i = pos
-            # pos_i = [s for s in pos if target.substitute(s) not in world]
             neg_i = expand(target, body, literal, world, constants, neg)
             score = gain(len(pos), len(neg), len(pos_i), len(neg_i))
             if score > bound:
-                print(' ', 'Skip:', target, ':-', body, literal, ':', len(pos_i), len(neg_i), '/',
-                      '%.3f' % score)
+                # print(' ', 'Skip:', target, ':-', body, literal, ':', len(pos_i), len(neg_i), '/',
+                #       '%.3f' % score)
                 continue
 
             if candidate is None or score > candidate.score:
-                print('*', target, ':-', body, literal, ':', len(pos_i), len(neg_i), '/', '%.3f' % score,
-                      '+')
+                # print('*', target, ':-', body, literal, ':', len(pos_i), len(neg_i), '/', '%.3f' % score,
+                #       '+')
                 candidate = Candidate(score, literal, pos_i, neg_i)
-            else:
-                print('*', target, ':-', body, literal, ':', len(pos_i), len(neg_i), '/', '%.3f' % score)
+            # else:
+            #     print('*', target, ':-', body, literal, ':', len(pos_i), len(neg_i), '/', '%.3f' % score)
 
-    print('-' * 120)
-    print('>>>>>', target, ':-', body, candidate.literal, ':', len(candidate.pos), len(candidate.neg), '/',
-          candidate.score)
-    print('-' * 120)
+    # print('-' * 120)
+    # print('>>>>>', target, ':-', body, candidate.literal, ':', len(candidate.pos), len(candidate.neg), '/',
+    #           candidate.score)
+    # print('-' * 120)
 
     return candidate
 
