@@ -4,6 +4,7 @@ from unittest import TestCase
 from assertpy import assert_that
 
 from foil.heuristic import entropy
+from foil.heuristic import gain
 from foil.heuristic import max_gain
 
 
@@ -27,10 +28,10 @@ class HeuristicTest(TestCase):
     def test_gain(self):
         for i, entry in enumerate([
             (18, 54, 10, 0, 20.0),
+            (18, 54, 0, 54, 0),
         ]):
             pos, neg, pos_i, neg_i, expected = entry
             with self.subTest(i=i, value=entry):
-                from foil.heuristic import gain
                 result = gain(pos, neg, pos_i, neg_i)
 
                 assert_that(result, 'gain(pos: int, neg: int, pos_i: int, neg_i: int) -> float:').is_equal_to(expected)

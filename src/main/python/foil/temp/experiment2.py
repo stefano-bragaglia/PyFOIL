@@ -43,7 +43,8 @@ if __name__ == '__main__':
     #     print(hypothesis)
 
     clauses = [
-        Clause.parse('path(X,Y) :- edge(X,V0).'),
+        Clause.parse('path(X,Y) :- edge(X,Y).'),
+        Clause.parse('path(X,Y) :- edge(X,V0), edge(V0,Y).'),
         Clause.parse('edge(0,1).'), Clause.parse('edge(0,3).'), Clause.parse('edge(1,2).'),
         Clause.parse('edge(3,2).'), Clause.parse('edge(3,4).'), Clause.parse('edge(4,5).'),
         Clause.parse('edge(4,6).'), Clause.parse('edge(6,8).'), Clause.parse('edge(7,6).'),
@@ -52,3 +53,4 @@ if __name__ == '__main__':
     for literal in sorted(Program(clauses).ground(), key=lambda x: repr(x)):
         print(literal)
     print()
+

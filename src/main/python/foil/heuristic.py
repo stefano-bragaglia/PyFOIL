@@ -12,7 +12,11 @@ def max_gain(pos: int, neg: int) -> float:
 
 
 def gain(pos: int, neg: int, pos_i: int, neg_i: int) -> float:
-    return min(pos, pos_i) * (entropy(pos, neg) - entropy(pos_i, neg_i))
+    common = min(pos, pos_i)
+    if common == 0:
+        return 0
+
+    return common * (entropy(pos, neg) - entropy(pos_i, neg_i))
 
 
 def entropy(pos: int, neg: int) -> float:  # yet to cover pos,  yet to cover neg

@@ -1,3 +1,4 @@
+import math
 from unittest import TestCase
 
 from assertpy import assert_that
@@ -745,9 +746,8 @@ class ExplorationTest(TestCase):
                     2.9798221180623696,
                     -7.991096657591974,
             ),
-
             (
-                    [],
+                    [Clause.parse('path(X,Y) :- edge(X,Y).')],
                     Literal.parse('path(X,Y)'),
                     [],
                     Literal.parse('edge(X,V0)'),
@@ -782,6 +782,7 @@ class ExplorationTest(TestCase):
 
                     # EXPECTED:
                     [
+                        Clause.parse('path(X,Y) :- edge(X,Y).'),
                         Clause.parse('path(X,Y) :- edge(X,V0).'),
                         Clause.parse('edge(0,1).'), Clause.parse('edge(0,3).'), Clause.parse('edge(1,2).'),
                         Clause.parse('edge(3,2).'), Clause.parse('edge(3,4).'), Clause.parse('edge(4,5).'),
@@ -789,36 +790,66 @@ class ExplorationTest(TestCase):
                         Clause.parse('edge(7,8).'),
                     ],
                     [
-                        Literal.parse('edge(0,1)'),
-                        Literal.parse('edge(0,3)'),
-                        Literal.parse('edge(1,2)'),
-                        Literal.parse('edge(3,2)'),
-                        Literal.parse('edge(3,4)'),
-                        Literal.parse('edge(4,5)'),
-                        Literal.parse('edge(4,6)'),
-                        Literal.parse('edge(6,8)'),
-                        Literal.parse('edge(7,6)'),
-                        Literal.parse('edge(7,8)'),
-                        Literal.parse('path(0,Y)'),
-                        Literal.parse('path(1,Y)'),
-                        Literal.parse('path(3,Y)'),
-                        Literal.parse('path(4,Y)'),
-                        Literal.parse('path(6,Y)'),
-                        Literal.parse('path(7,Y)'),
+                        Literal.parse('edge(0,1)'), Literal.parse('edge(0,3)'), Literal.parse('edge(1,2)'),
+                        Literal.parse('edge(3,2)'), Literal.parse('edge(3,4)'), Literal.parse('edge(4,5)'),
+                        Literal.parse('edge(4,6)'), Literal.parse('edge(6,8)'), Literal.parse('edge(7,6)'),
+                        Literal.parse('edge(7,8)'), Literal.parse('path(0,1)'), Literal.parse('path(0,3)'),
+                        Literal.parse('path(0,Y)'), Literal.parse('path(1,2)'), Literal.parse('path(1,Y)'),
+                        Literal.parse('path(3,2)'), Literal.parse('path(3,4)'), Literal.parse('path(3,Y)'),
+                        Literal.parse('path(4,5)'), Literal.parse('path(4,6)'), Literal.parse('path(4,Y)'),
+                        Literal.parse('path(6,8)'), Literal.parse('path(6,Y)'), Literal.parse('path(7,6)'),
+                        Literal.parse('path(7,8)'), Literal.parse('path(7,Y)'),
                     ],
                     [
-                        {'X': 0, 'Y': 1, 'V0': 1}, {'X': 0, 'Y': 1, 'V0': 3}, {'X': 0, 'Y': 2, 'V0': 1},
-                        {'X': 0, 'Y': 2, 'V0': 3}, {'X': 0, 'Y': 3, 'V0': 1}, {'X': 0, 'Y': 3, 'V0': 3},
-                        {'X': 0, 'Y': 4, 'V0': 1}, {'X': 0, 'Y': 4, 'V0': 3}, {'X': 0, 'Y': 5, 'V0': 1},
-                        {'X': 0, 'Y': 5, 'V0': 3}, {'X': 0, 'Y': 6, 'V0': 1}, {'X': 0, 'Y': 6, 'V0': 3},
-                        {'X': 0, 'Y': 8, 'V0': 1}, {'X': 0, 'Y': 8, 'V0': 3}, {'X': 1, 'Y': 2, 'V0': 2},
-                        {'X': 3, 'Y': 2, 'V0': 2}, {'X': 3, 'Y': 2, 'V0': 4}, {'X': 3, 'Y': 4, 'V0': 2},
-                        {'X': 3, 'Y': 4, 'V0': 4}, {'X': 3, 'Y': 5, 'V0': 2}, {'X': 3, 'Y': 5, 'V0': 4},
+                        {'X': 0, 'Y': 2, 'V0': 1}, {'X': 0, 'Y': 2, 'V0': 3}, {'X': 0, 'Y': 4, 'V0': 1},
+                        {'X': 0, 'Y': 4, 'V0': 3}, {'X': 0, 'Y': 5, 'V0': 1}, {'X': 0, 'Y': 5, 'V0': 3},
+                        {'X': 0, 'Y': 6, 'V0': 1}, {'X': 0, 'Y': 6, 'V0': 3}, {'X': 0, 'Y': 8, 'V0': 1},
+                        {'X': 0, 'Y': 8, 'V0': 3}, {'X': 3, 'Y': 5, 'V0': 2}, {'X': 3, 'Y': 5, 'V0': 4},
                         {'X': 3, 'Y': 6, 'V0': 2}, {'X': 3, 'Y': 6, 'V0': 4}, {'X': 3, 'Y': 8, 'V0': 2},
-                        {'X': 3, 'Y': 8, 'V0': 4}, {'X': 4, 'Y': 5, 'V0': 5}, {'X': 4, 'Y': 5, 'V0': 6},
-                        {'X': 4, 'Y': 6, 'V0': 5}, {'X': 4, 'Y': 6, 'V0': 6}, {'X': 4, 'Y': 8, 'V0': 5},
-                        {'X': 4, 'Y': 8, 'V0': 6}, {'X': 6, 'Y': 8, 'V0': 8}, {'X': 7, 'Y': 6, 'V0': 8},
-                        {'X': 7, 'Y': 6, 'V0': 6}, {'X': 7, 'Y': 8, 'V0': 8}, {'X': 7, 'Y': 8, 'V0': 6},
+                        {'X': 3, 'Y': 8, 'V0': 4}, {'X': 4, 'Y': 8, 'V0': 5}, {'X': 4, 'Y': 8, 'V0': 6}
+                    ],
+                    [
+                        {'X': 0, 'Y': 0, 'V0': 1}, {'X': 0, 'Y': 0, 'V0': 3}, {'X': 0, 'Y': 7, 'V0': 1},
+                        {'X': 0, 'Y': 7, 'V0': 3}, {'X': 1, 'Y': 0, 'V0': 2}, {'X': 1, 'Y': 1, 'V0': 2},
+                        {'X': 1, 'Y': 3, 'V0': 2}, {'X': 1, 'Y': 4, 'V0': 2}, {'X': 1, 'Y': 5, 'V0': 2},
+                        {'X': 1, 'Y': 6, 'V0': 2}, {'X': 1, 'Y': 7, 'V0': 2}, {'X': 1, 'Y': 8, 'V0': 2},
+                        {'X': 3, 'Y': 0, 'V0': 2}, {'X': 3, 'Y': 0, 'V0': 4}, {'X': 3, 'Y': 1, 'V0': 2},
+                        {'X': 3, 'Y': 1, 'V0': 4}, {'X': 3, 'Y': 3, 'V0': 2}, {'X': 3, 'Y': 3, 'V0': 4},
+                        {'X': 3, 'Y': 7, 'V0': 2}, {'X': 3, 'Y': 7, 'V0': 4}, {'X': 4, 'Y': 0, 'V0': 5},
+                        {'X': 4, 'Y': 0, 'V0': 6}, {'X': 4, 'Y': 1, 'V0': 5}, {'X': 4, 'Y': 1, 'V0': 6},
+                        {'X': 4, 'Y': 2, 'V0': 5}, {'X': 4, 'Y': 2, 'V0': 6}, {'X': 4, 'Y': 3, 'V0': 5},
+                        {'X': 4, 'Y': 3, 'V0': 6}, {'X': 4, 'Y': 4, 'V0': 5}, {'X': 4, 'Y': 4, 'V0': 6},
+                        {'X': 4, 'Y': 7, 'V0': 5}, {'X': 4, 'Y': 7, 'V0': 6}, {'X': 6, 'Y': 0, 'V0': 8},
+                        {'X': 6, 'Y': 1, 'V0': 8}, {'X': 6, 'Y': 2, 'V0': 8}, {'X': 6, 'Y': 3, 'V0': 8},
+                        {'X': 6, 'Y': 4, 'V0': 8}, {'X': 6, 'Y': 5, 'V0': 8}, {'X': 6, 'Y': 6, 'V0': 8},
+                        {'X': 6, 'Y': 7, 'V0': 8}, {'X': 7, 'Y': 0, 'V0': 8}, {'X': 7, 'Y': 0, 'V0': 6},
+                        {'X': 7, 'Y': 1, 'V0': 8}, {'X': 7, 'Y': 1, 'V0': 6}, {'X': 7, 'Y': 2, 'V0': 8},
+                        {'X': 7, 'Y': 2, 'V0': 6}, {'X': 7, 'Y': 3, 'V0': 8}, {'X': 7, 'Y': 3, 'V0': 6},
+                        {'X': 7, 'Y': 4, 'V0': 8}, {'X': 7, 'Y': 4, 'V0': 6}, {'X': 7, 'Y': 5, 'V0': 8},
+                        {'X': 7, 'Y': 5, 'V0': 6}, {'X': 7, 'Y': 7, 'V0': 8}, {'X': 7, 'Y': 7, 'V0': 6},
+                    ],
+                    2.0,
+                    1.6546048099387036,
+            ),
+            (
+                    [Clause.parse('path(X,Y) :- edge(X,Y).')],
+                    Literal.parse('path(X,Y)'),
+                    [Literal.parse('edge(X,V0)')],
+                    Literal.parse('path(V0,Y)'),
+                    [
+                        Clause.parse('edge(0,1).'), Clause.parse('edge(0,3).'), Clause.parse('edge(1,2).'),
+                        Clause.parse('edge(3,2).'), Clause.parse('edge(3,4).'), Clause.parse('edge(4,5).'),
+                        Clause.parse('edge(4,6).'), Clause.parse('edge(6,8).'), Clause.parse('edge(7,6).'),
+                        Clause.parse('edge(7,8).'),
+                    ],
+                    [0, 1, 2, 3, 4, 5, 6, 7, 8],
+                    [
+                        {'X': 0, 'Y': 2, 'V0': 1}, {'X': 0, 'Y': 2, 'V0': 3}, {'X': 0, 'Y': 4, 'V0': 1},
+                        {'X': 0, 'Y': 4, 'V0': 3}, {'X': 0, 'Y': 5, 'V0': 1}, {'X': 0, 'Y': 5, 'V0': 3},
+                        {'X': 0, 'Y': 6, 'V0': 1}, {'X': 0, 'Y': 6, 'V0': 3}, {'X': 0, 'Y': 8, 'V0': 1},
+                        {'X': 0, 'Y': 8, 'V0': 3}, {'X': 3, 'Y': 5, 'V0': 2}, {'X': 3, 'Y': 5, 'V0': 4},
+                        {'X': 3, 'Y': 6, 'V0': 2}, {'X': 3, 'Y': 6, 'V0': 4}, {'X': 3, 'Y': 8, 'V0': 2},
+                        {'X': 3, 'Y': 8, 'V0': 4}, {'X': 4, 'Y': 8, 'V0': 5}, {'X': 4, 'Y': 8, 'V0': 6}
                     ],
                     [
                         {'X': 0, 'Y': 0, 'V0': 1}, {'X': 0, 'Y': 0, 'V0': 3}, {'X': 0, 'Y': 7, 'V0': 1},
@@ -841,8 +872,150 @@ class ExplorationTest(TestCase):
                         {'X': 7, 'Y': 5, 'V0': 6}, {'X': 7, 'Y': 7, 'V0': 8}, {'X': 7, 'Y': 7, 'V0': 6},
                     ],
 
-                    2.9798221180623696,
-                    -7.991096657591974,
+                    # EXPECTED:
+                    [
+                        Clause.parse('path(X,Y) :- edge(X,Y).'),
+                        Clause.parse('path(X,Y) :- edge(X,V0), path(V0,Y).'),
+                        Clause.parse('edge(0,1).'), Clause.parse('edge(0,3).'), Clause.parse('edge(1,2).'),
+                        Clause.parse('edge(3,2).'), Clause.parse('edge(3,4).'), Clause.parse('edge(4,5).'),
+                        Clause.parse('edge(4,6).'), Clause.parse('edge(6,8).'), Clause.parse('edge(7,6).'),
+                        Clause.parse('edge(7,8).'),
+                    ],
+                    [
+                        Literal.parse('edge(0,1)'), Literal.parse('edge(0,3)'), Literal.parse('edge(1,2)'),
+                        Literal.parse('edge(3,2)'), Literal.parse('edge(3,4)'), Literal.parse('edge(4,5)'),
+                        Literal.parse('edge(4,6)'), Literal.parse('edge(6,8)'), Literal.parse('edge(7,6)'),
+                        Literal.parse('edge(7,8)'), Literal.parse('path(0,1)'), Literal.parse('path(0,2)'),
+                        Literal.parse('path(0,3)'), Literal.parse('path(0,4)'), Literal.parse('path(0,5)'),
+                        Literal.parse('path(0,6)'), Literal.parse('path(0,8)'), Literal.parse('path(1,2)'),
+                        Literal.parse('path(3,2)'), Literal.parse('path(3,4)'), Literal.parse('path(3,5)'),
+                        Literal.parse('path(3,6)'), Literal.parse('path(3,8)'), Literal.parse('path(4,5)'),
+                        Literal.parse('path(4,6)'), Literal.parse('path(4,8)'), Literal.parse('path(6,8)'),
+                        Literal.parse('path(7,6)'), Literal.parse('path(7,8)'),
+                    ],
+                    [
+                        {'X': 0, 'Y': 2, 'V0': 1}, {'X': 0, 'Y': 2, 'V0': 3}, {'X': 0, 'Y': 4, 'V0': 3},
+                        {'X': 0, 'Y': 5, 'V0': 3}, {'X': 0, 'Y': 6, 'V0': 3}, {'X': 0, 'Y': 8, 'V0': 3},
+                        {'X': 3, 'Y': 5, 'V0': 4}, {'X': 3, 'Y': 6, 'V0': 4}, {'X': 3, 'Y': 8, 'V0': 4},
+                        {'X': 4, 'Y': 8, 'V0': 6},
+                    ],
+                    [
+                        {'X': 0, 'Y': 0, 'V0': 1}, {'X': 0, 'Y': 0, 'V0': 3}, {'X': 0, 'Y': 7, 'V0': 1},
+                        {'X': 0, 'Y': 7, 'V0': 3}, {'X': 1, 'Y': 0, 'V0': 2}, {'X': 1, 'Y': 1, 'V0': 2},
+                        {'X': 1, 'Y': 3, 'V0': 2}, {'X': 1, 'Y': 4, 'V0': 2}, {'X': 1, 'Y': 5, 'V0': 2},
+                        {'X': 1, 'Y': 6, 'V0': 2}, {'X': 1, 'Y': 7, 'V0': 2}, {'X': 1, 'Y': 8, 'V0': 2},
+                        {'X': 3, 'Y': 0, 'V0': 2}, {'X': 3, 'Y': 0, 'V0': 4}, {'X': 3, 'Y': 1, 'V0': 2},
+                        {'X': 3, 'Y': 1, 'V0': 4}, {'X': 3, 'Y': 3, 'V0': 2}, {'X': 3, 'Y': 3, 'V0': 4},
+                        {'X': 3, 'Y': 7, 'V0': 2}, {'X': 3, 'Y': 7, 'V0': 4}, {'X': 4, 'Y': 0, 'V0': 5},
+                        {'X': 4, 'Y': 0, 'V0': 6}, {'X': 4, 'Y': 1, 'V0': 5}, {'X': 4, 'Y': 1, 'V0': 6},
+                        {'X': 4, 'Y': 2, 'V0': 5}, {'X': 4, 'Y': 2, 'V0': 6}, {'X': 4, 'Y': 3, 'V0': 5},
+                        {'X': 4, 'Y': 3, 'V0': 6}, {'X': 4, 'Y': 4, 'V0': 5}, {'X': 4, 'Y': 4, 'V0': 6},
+                        {'X': 4, 'Y': 7, 'V0': 5}, {'X': 4, 'Y': 7, 'V0': 6}, {'X': 6, 'Y': 0, 'V0': 8},
+                        {'X': 6, 'Y': 1, 'V0': 8}, {'X': 6, 'Y': 2, 'V0': 8}, {'X': 6, 'Y': 3, 'V0': 8},
+                        {'X': 6, 'Y': 4, 'V0': 8}, {'X': 6, 'Y': 5, 'V0': 8}, {'X': 6, 'Y': 6, 'V0': 8},
+                        {'X': 6, 'Y': 7, 'V0': 8}, {'X': 7, 'Y': 0, 'V0': 8}, {'X': 7, 'Y': 0, 'V0': 6},
+                        {'X': 7, 'Y': 1, 'V0': 8}, {'X': 7, 'Y': 1, 'V0': 6}, {'X': 7, 'Y': 2, 'V0': 8},
+                        {'X': 7, 'Y': 2, 'V0': 6}, {'X': 7, 'Y': 3, 'V0': 8}, {'X': 7, 'Y': 3, 'V0': 6},
+                        {'X': 7, 'Y': 4, 'V0': 8}, {'X': 7, 'Y': 4, 'V0': 6}, {'X': 7, 'Y': 5, 'V0': 8},
+                        {'X': 7, 'Y': 5, 'V0': 6}, {'X': 7, 'Y': 7, 'V0': 8}, {'X': 7, 'Y': 7, 'V0': 6},
+                    ],
+                    math.inf,
+                    0,
+            ),
+
+            (
+                    [Clause.parse('path(X,Y) :- edge(X,Y).')],
+                    Literal.parse('path(X,Y)'),
+                    [Literal.parse('edge(X,V0)')],
+                    Literal.parse('edge(V0,Y)'),
+                    [
+                        Clause.parse('edge(0,1).'), Clause.parse('edge(0,3).'), Clause.parse('edge(1,2).'),
+                        Clause.parse('edge(3,2).'), Clause.parse('edge(3,4).'), Clause.parse('edge(4,5).'),
+                        Clause.parse('edge(4,6).'), Clause.parse('edge(6,8).'), Clause.parse('edge(7,6).'),
+                        Clause.parse('edge(7,8).'),
+                    ],
+                    [0, 1, 2, 3, 4, 5, 6, 7, 8],
+                    [
+                        {'X': 0, 'Y': 2, 'V0': 1}, {'X': 0, 'Y': 2, 'V0': 3}, {'X': 0, 'Y': 4, 'V0': 1},
+                        {'X': 0, 'Y': 4, 'V0': 3}, {'X': 0, 'Y': 5, 'V0': 1}, {'X': 0, 'Y': 5, 'V0': 3},
+                        {'X': 0, 'Y': 6, 'V0': 1}, {'X': 0, 'Y': 6, 'V0': 3}, {'X': 0, 'Y': 8, 'V0': 1},
+                        {'X': 0, 'Y': 8, 'V0': 3}, {'X': 3, 'Y': 5, 'V0': 2}, {'X': 3, 'Y': 5, 'V0': 4},
+                        {'X': 3, 'Y': 6, 'V0': 2}, {'X': 3, 'Y': 6, 'V0': 4}, {'X': 3, 'Y': 8, 'V0': 2},
+                        {'X': 3, 'Y': 8, 'V0': 4}, {'X': 4, 'Y': 8, 'V0': 5}, {'X': 4, 'Y': 8, 'V0': 6}
+                    ],
+                    [
+                        {'X': 0, 'Y': 0, 'V0': 1}, {'X': 0, 'Y': 0, 'V0': 3}, {'X': 0, 'Y': 7, 'V0': 1},
+                        {'X': 0, 'Y': 7, 'V0': 3}, {'X': 1, 'Y': 0, 'V0': 2}, {'X': 1, 'Y': 1, 'V0': 2},
+                        {'X': 1, 'Y': 3, 'V0': 2}, {'X': 1, 'Y': 4, 'V0': 2}, {'X': 1, 'Y': 5, 'V0': 2},
+                        {'X': 1, 'Y': 6, 'V0': 2}, {'X': 1, 'Y': 7, 'V0': 2}, {'X': 1, 'Y': 8, 'V0': 2},
+                        {'X': 3, 'Y': 0, 'V0': 2}, {'X': 3, 'Y': 0, 'V0': 4}, {'X': 3, 'Y': 1, 'V0': 2},
+                        {'X': 3, 'Y': 1, 'V0': 4}, {'X': 3, 'Y': 3, 'V0': 2}, {'X': 3, 'Y': 3, 'V0': 4},
+                        {'X': 3, 'Y': 7, 'V0': 2}, {'X': 3, 'Y': 7, 'V0': 4}, {'X': 4, 'Y': 0, 'V0': 5},
+                        {'X': 4, 'Y': 0, 'V0': 6}, {'X': 4, 'Y': 1, 'V0': 5}, {'X': 4, 'Y': 1, 'V0': 6},
+                        {'X': 4, 'Y': 2, 'V0': 5}, {'X': 4, 'Y': 2, 'V0': 6}, {'X': 4, 'Y': 3, 'V0': 5},
+                        {'X': 4, 'Y': 3, 'V0': 6}, {'X': 4, 'Y': 4, 'V0': 5}, {'X': 4, 'Y': 4, 'V0': 6},
+                        {'X': 4, 'Y': 7, 'V0': 5}, {'X': 4, 'Y': 7, 'V0': 6}, {'X': 6, 'Y': 0, 'V0': 8},
+                        {'X': 6, 'Y': 1, 'V0': 8}, {'X': 6, 'Y': 2, 'V0': 8}, {'X': 6, 'Y': 3, 'V0': 8},
+                        {'X': 6, 'Y': 4, 'V0': 8}, {'X': 6, 'Y': 5, 'V0': 8}, {'X': 6, 'Y': 6, 'V0': 8},
+                        {'X': 6, 'Y': 7, 'V0': 8}, {'X': 7, 'Y': 0, 'V0': 8}, {'X': 7, 'Y': 0, 'V0': 6},
+                        {'X': 7, 'Y': 1, 'V0': 8}, {'X': 7, 'Y': 1, 'V0': 6}, {'X': 7, 'Y': 2, 'V0': 8},
+                        {'X': 7, 'Y': 2, 'V0': 6}, {'X': 7, 'Y': 3, 'V0': 8}, {'X': 7, 'Y': 3, 'V0': 6},
+                        {'X': 7, 'Y': 4, 'V0': 8}, {'X': 7, 'Y': 4, 'V0': 6}, {'X': 7, 'Y': 5, 'V0': 8},
+                        {'X': 7, 'Y': 5, 'V0': 6}, {'X': 7, 'Y': 7, 'V0': 8}, {'X': 7, 'Y': 7, 'V0': 6},
+                    ],
+
+                    # EXPECTED:
+                    [
+                        Clause.parse('path(X,Y) :- edge(X,Y).'),
+                        Clause.parse('path(X,Y) :- edge(X,V0), edge(V0,Y).'),
+                        Clause.parse('edge(0,1).'), Clause.parse('edge(0,3).'), Clause.parse('edge(1,2).'),
+                        Clause.parse('edge(3,2).'), Clause.parse('edge(3,4).'), Clause.parse('edge(4,5).'),
+                        Clause.parse('edge(4,6).'), Clause.parse('edge(6,8).'), Clause.parse('edge(7,6).'),
+                        Clause.parse('edge(7,8).'),
+                    ],
+                    [
+                        Literal.parse('edge(0,1)'), Literal.parse('edge(0,3)'), Literal.parse('edge(1,2)'),
+                        Literal.parse('edge(3,2)'), Literal.parse('edge(3,4)'), Literal.parse('edge(4,5)'),
+                        Literal.parse('edge(4,6)'), Literal.parse('edge(6,8)'), Literal.parse('edge(7,6)'),
+                        Literal.parse('edge(7,8)'), Literal.parse('path(0,1)'), Literal.parse('path(0,2)'),
+                        Literal.parse('path(0,3)'), Literal.parse('path(0,4)'), Literal.parse('path(1,2)'),
+                        Literal.parse('path(3,2)'), Literal.parse('path(3,4)'), Literal.parse('path(3,5)'),
+                        Literal.parse('path(3,6)'), Literal.parse('path(4,5)'), Literal.parse('path(4,6)'),
+                        Literal.parse('path(4,8)'), Literal.parse('path(6,8)'), Literal.parse('path(7,6)'),
+                        Literal.parse('path(7,8)'),
+                    ],
+                    [
+                        {'X': 0, 'Y': 5, 'V0': 1},
+                        {'X': 0, 'Y': 5, 'V0': 3},
+                        {'X': 0, 'Y': 6, 'V0': 1},
+                        {'X': 0, 'Y': 6, 'V0': 3},
+                        {'X': 0, 'Y': 8, 'V0': 1},
+                        {'X': 0, 'Y': 8, 'V0': 3},
+                        {'X': 3, 'Y': 8, 'V0': 2},
+                        {'X': 3, 'Y': 8, 'V0': 4},
+                    ],
+                    [
+                        {'X': 0, 'Y': 0, 'V0': 1}, {'X': 0, 'Y': 0, 'V0': 3}, {'X': 0, 'Y': 7, 'V0': 1},
+                        {'X': 0, 'Y': 7, 'V0': 3}, {'X': 1, 'Y': 0, 'V0': 2}, {'X': 1, 'Y': 1, 'V0': 2},
+                        {'X': 1, 'Y': 3, 'V0': 2}, {'X': 1, 'Y': 4, 'V0': 2}, {'X': 1, 'Y': 5, 'V0': 2},
+                        {'X': 1, 'Y': 6, 'V0': 2}, {'X': 1, 'Y': 7, 'V0': 2}, {'X': 1, 'Y': 8, 'V0': 2},
+                        {'X': 3, 'Y': 0, 'V0': 2}, {'X': 3, 'Y': 0, 'V0': 4}, {'X': 3, 'Y': 1, 'V0': 2},
+                        {'X': 3, 'Y': 1, 'V0': 4}, {'X': 3, 'Y': 3, 'V0': 2}, {'X': 3, 'Y': 3, 'V0': 4},
+                        {'X': 3, 'Y': 7, 'V0': 2}, {'X': 3, 'Y': 7, 'V0': 4}, {'X': 4, 'Y': 0, 'V0': 5},
+                        {'X': 4, 'Y': 0, 'V0': 6}, {'X': 4, 'Y': 1, 'V0': 5}, {'X': 4, 'Y': 1, 'V0': 6},
+                        {'X': 4, 'Y': 2, 'V0': 5}, {'X': 4, 'Y': 2, 'V0': 6}, {'X': 4, 'Y': 3, 'V0': 5},
+                        {'X': 4, 'Y': 3, 'V0': 6}, {'X': 4, 'Y': 4, 'V0': 5}, {'X': 4, 'Y': 4, 'V0': 6},
+                        {'X': 4, 'Y': 7, 'V0': 5}, {'X': 4, 'Y': 7, 'V0': 6}, {'X': 6, 'Y': 0, 'V0': 8},
+                        {'X': 6, 'Y': 1, 'V0': 8}, {'X': 6, 'Y': 2, 'V0': 8}, {'X': 6, 'Y': 3, 'V0': 8},
+                        {'X': 6, 'Y': 4, 'V0': 8}, {'X': 6, 'Y': 5, 'V0': 8}, {'X': 6, 'Y': 6, 'V0': 8},
+                        {'X': 6, 'Y': 7, 'V0': 8}, {'X': 7, 'Y': 0, 'V0': 8}, {'X': 7, 'Y': 0, 'V0': 6},
+                        {'X': 7, 'Y': 1, 'V0': 8}, {'X': 7, 'Y': 1, 'V0': 6}, {'X': 7, 'Y': 2, 'V0': 8},
+                        {'X': 7, 'Y': 2, 'V0': 6}, {'X': 7, 'Y': 3, 'V0': 8}, {'X': 7, 'Y': 3, 'V0': 6},
+                        {'X': 7, 'Y': 4, 'V0': 8}, {'X': 7, 'Y': 4, 'V0': 6}, {'X': 7, 'Y': 5, 'V0': 8},
+                        {'X': 7, 'Y': 5, 'V0': 6}, {'X': 7, 'Y': 7, 'V0': 8}, {'X': 7, 'Y': 7, 'V0': 6},
+                    ],
+                    2.9541963103868754,
+                    -7.633570483095003,
             ),
 
         ]):
@@ -855,16 +1028,20 @@ class ExplorationTest(TestCase):
                 assert_that(world, 'world').is_equal_to(exp_world)
 
                 pos_i = expand(target, body, literal, world, constants, pos)
-                for i, res in enumerate(pos_i):
-                    exp = exp_pos_i[i]
-                    assert_that(res, 'pos_i: %d/%d) %s == %s' % (i, len(pos_i), res, exp)).is_equal_to(exp)
-                # assert_that(pos_i, 'pos_i').is_equal_to(exp_pos_i)
+                if not exp_pos_i:
+                    assert_that(pos_i, 'pos_i').is_empty()
+                else:
+                    for i, res in enumerate(pos_i):
+                        exp = exp_pos_i[i]
+                        assert_that(res, 'pos_i: %d/%d) %s == %s' % (i, len(pos_i), res, exp)).is_equal_to(exp)
 
                 neg_i = expand(target, body, literal, world, constants, neg)
-                for i, res in enumerate(neg_i):
-                    exp = exp_neg_i[i]
-                    assert_that(res, 'neg_i: %d/%d) %s == %s' % (i, len(neg_i), res, exp)).is_equal_to(exp)
-                # assert_that(neg_i, 'neg_i').is_equal_to(exp_neg_i)
+                if not exp_neg_i:
+                    assert_that(neg_i, 'neg_i').is_empty()
+                else:
+                    for i, res in enumerate(neg_i):
+                        exp = exp_neg_i[i]
+                        assert_that(res, 'neg_i: %d/%d) %s == %s' % (i, len(neg_i), res, exp)).is_equal_to(exp)
 
                 ent = entropy(len(pos_i), len(neg_i))
                 assert_that(ent, 'entropy(%d,%d)' % (len(pos_i), len(neg_i))).is_equal_to(exp_entropy)
@@ -875,6 +1052,34 @@ class ExplorationTest(TestCase):
 
 
 """
-[{'X': 0, 'Y': 1, 'V0': 1}, {'X': 0, 'Y': 1, 'V0': 3}, {'X': 0, 'Y': 2, 'V0': 1}, {'X': 0, 'Y': 2, 'V0': 3}, {'X': 0, 'Y': 3, 'V0': 1}, {'X': 0, 'Y': 3, 'V0': 3}, {'X': 0, 'Y': 4, 'V0': 1}, {'X': 0, 'Y': 4, 'V0': 3}, {'X': 0, 'Y': 5, 'V0': 1}, {'X': 0, 'Y': 5, 'V0': 3}, {'X': 0, 'Y': 6, 'V0': 1}, {'X': 0, 'Y': 6, 'V0': 3}, {'X': 0, 'Y': 8, 'V0': 1}, {'X': 0, 'Y': 8, 'V0': 3}, {'X': 1, 'Y': 2, 'V0': 2}, {'X': 3, 'Y': 2, 'V0': 2}, {'X': 3, 'Y': 2, 'V0': 4}, {'X': 3, 'Y': 4, 'V0': 2}, {'X': 3, 'Y': 4, 'V0': 4}, {'X': 3, 'Y': 5, 'V0': 2}, {'X': 3, 'Y': 5, 'V0': 4}, {'X': 3, 'Y': 6, 'V0': 2}, {'X': 3, 'Y': 6, 'V0': 4}, {'X': 3, 'Y': 8, 'V0': 2}, {'X': 3, 'Y': 8, 'V0': 4}, {'X': 4, 'Y': 5, 'V0': 5}, {'X': 4, 'Y': 5, 'V0': 6}, {'X': 4, 'Y': 6, 'V0': 5}, {'X': 4, 'Y': 6, 'V0': 6}, {'X': 4, 'Y': 8, 'V0': 5}, {'X': 4, 'Y': 8, 'V0': 6}, {'X': 6, 'Y': 8, 'V0': 8}, {'X': 7, 'Y': 6, 'V0': 8}, {'X': 7, 'Y': 6, 'V0': 6}, {'X': 7, 'Y': 8, 'V0': 8}, {'X': 7, 'Y': 8, 'V0': 6}]
-[{'X': 0, 'Y': 1, 'V0': 1}, {'X': 0, 'Y': 1, 'V0': 3}, {'X': 0, 'Y': 2, 'V0': 1}, {'X': 0, 'Y': 2, 'V0': 3}, {'X': 0, 'Y': 3, 'V0': 1}, {'X': 0, 'Y': 3, 'V0': 3}, {'X': 0, 'Y': 4, 'V0': 1}, {'X': 0, 'Y': 4, 'V0': 3}, {'X': 0, 'Y': 5, 'V0': 1}, {'X': 0, 'Y': 5, 'V0': 3}, {'X': 0, 'Y': 6, 'V0': 1}, {'X': 0, 'Y': 6, 'V0': 3}, {'X': 0, 'Y': 8, 'V0': 1}, {'X': 0, 'Y': 8, 'V0': 3}, {'X': 1, 'Y': 2, 'V0': 2}, {'X': 3, 'Y': 2, 'V0': 2}, {'X': 3, 'Y': 2, 'V0': 4}, {'X': 3, 'Y': 4, 'V0': 2}, {'X': 3, 'Y': 4, 'V0': 4}, {'X': 3, 'Y': 5, 'V0': 2}, {'X': 3, 'Y': 5, 'V0': 4}, {'X': 3, 'Y': 6, 'V0': 2}, {'X': 3, 'Y': 6, 'V0': 4}, {'X': 3, 'Y': 8, 'V0': 2}, {'X': 3, 'Y': 8, 'V0': 4}, {'X': 4, 'Y': 5, 'V0': 5}, {'X': 4, 'Y': 5, 'V0': 6}, {'X': 4, 'Y': 6, 'V0': 5}, {'X': 4, 'Y': 6, 'V0': 6}, {'X': 4, 'Y': 8, 'V0': 5}, {'X': 4, 'Y': 8, 'V0': 6}, {'X': 6, 'Y': 8, 'V0': 8}, {'X': 7, 'Y': 6, 'V0': 6}, {'X': 7, 'Y': 6, 'V0': 8}, {'X': 7, 'Y': 8, 'V0': 6}, {'X': 7, 'Y': 8, 'V0': 8}]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """
