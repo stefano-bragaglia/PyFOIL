@@ -3,6 +3,9 @@ from unittest import TestCase
 
 from assertpy import assert_that
 
+from foil.heuristic import entropy
+from foil.heuristic import gain
+from foil.learning import Candidate
 from foil.learning import expand
 from foil.learning import find_literal
 from foil.learning import get_assignments
@@ -15,8 +18,6 @@ from foil.learning import get_signature
 from foil.learning import get_variables
 from foil.learning import itemize
 from foil.learning import sort
-from foil.heuristic import entropy
-from foil.heuristic import gain
 from foil.models import Clause
 from foil.models import Example
 from foil.models import Literal
@@ -61,7 +62,44 @@ class ExplorationTest(TestCase):
                         {'X': 8, 'Y': 2}, {'X': 8, 'Y': 3}, {'X': 8, 'Y': 4}, {'X': 8, 'Y': 5}, {'X': 8, 'Y': 6},
                         {'X': 8, 'Y': 7}, {'X': 8, 'Y': 8},
                     ],
-                    None,
+                    Candidate(
+                        14.62989349651986,
+                        Literal.parse('edge(X, V0)'),
+                        [
+                            {'X': 0, 'Y': 1, 'V0': 1}, {'X': 0, 'Y': 1, 'V0': 3}, {'X': 0, 'Y': 2, 'V0': 1},
+                            {'X': 0, 'Y': 2, 'V0': 3}, {'X': 0, 'Y': 3, 'V0': 1}, {'X': 0, 'Y': 3, 'V0': 3},
+                            {'X': 0, 'Y': 4, 'V0': 1}, {'X': 0, 'Y': 4, 'V0': 3}, {'X': 0, 'Y': 5, 'V0': 1},
+                            {'X': 0, 'Y': 5, 'V0': 3}, {'X': 0, 'Y': 6, 'V0': 1}, {'X': 0, 'Y': 6, 'V0': 3},
+                            {'X': 0, 'Y': 8, 'V0': 1}, {'X': 0, 'Y': 8, 'V0': 3}, {'X': 1, 'Y': 2, 'V0': 2},
+                            {'X': 3, 'Y': 2, 'V0': 2}, {'X': 3, 'Y': 2, 'V0': 4}, {'X': 3, 'Y': 4, 'V0': 2},
+                            {'X': 3, 'Y': 4, 'V0': 4}, {'X': 3, 'Y': 5, 'V0': 2}, {'X': 3, 'Y': 5, 'V0': 4},
+                            {'X': 3, 'Y': 6, 'V0': 2}, {'X': 3, 'Y': 6, 'V0': 4}, {'X': 3, 'Y': 8, 'V0': 2},
+                            {'X': 3, 'Y': 8, 'V0': 4}, {'X': 4, 'Y': 5, 'V0': 5}, {'X': 4, 'Y': 5, 'V0': 6},
+                            {'X': 4, 'Y': 6, 'V0': 5}, {'X': 4, 'Y': 6, 'V0': 6}, {'X': 4, 'Y': 8, 'V0': 5},
+                            {'X': 4, 'Y': 8, 'V0': 6}, {'X': 6, 'Y': 8, 'V0': 8}, {'X': 7, 'Y': 6, 'V0': 8},
+                            {'X': 7, 'Y': 6, 'V0': 6}, {'X': 7, 'Y': 8, 'V0': 8}, {'X': 7, 'Y': 8, 'V0': 6},
+                        ],
+                        [
+                            {'X': 0, 'Y': 0, 'V0': 1}, {'X': 0, 'Y': 0, 'V0': 3}, {'X': 0, 'Y': 7, 'V0': 1},
+                            {'X': 0, 'Y': 7, 'V0': 3}, {'X': 1, 'Y': 0, 'V0': 2}, {'X': 1, 'Y': 1, 'V0': 2},
+                            {'X': 1, 'Y': 3, 'V0': 2}, {'X': 1, 'Y': 4, 'V0': 2}, {'X': 1, 'Y': 5, 'V0': 2},
+                            {'X': 1, 'Y': 6, 'V0': 2}, {'X': 1, 'Y': 7, 'V0': 2}, {'X': 1, 'Y': 8, 'V0': 2},
+                            {'X': 3, 'Y': 0, 'V0': 2}, {'X': 3, 'Y': 0, 'V0': 4}, {'X': 3, 'Y': 1, 'V0': 2},
+                            {'X': 3, 'Y': 1, 'V0': 4}, {'X': 3, 'Y': 3, 'V0': 2}, {'X': 3, 'Y': 3, 'V0': 4},
+                            {'X': 3, 'Y': 7, 'V0': 2}, {'X': 3, 'Y': 7, 'V0': 4}, {'X': 4, 'Y': 0, 'V0': 5},
+                            {'X': 4, 'Y': 0, 'V0': 6}, {'X': 4, 'Y': 1, 'V0': 5}, {'X': 4, 'Y': 1, 'V0': 6},
+                            {'X': 4, 'Y': 2, 'V0': 5}, {'X': 4, 'Y': 2, 'V0': 6}, {'X': 4, 'Y': 3, 'V0': 5},
+                            {'X': 4, 'Y': 3, 'V0': 6}, {'X': 4, 'Y': 4, 'V0': 5}, {'X': 4, 'Y': 4, 'V0': 6},
+                            {'X': 4, 'Y': 7, 'V0': 5}, {'X': 4, 'Y': 7, 'V0': 6}, {'X': 6, 'Y': 0, 'V0': 8},
+                            {'X': 6, 'Y': 1, 'V0': 8}, {'X': 6, 'Y': 2, 'V0': 8}, {'X': 6, 'Y': 3, 'V0': 8},
+                            {'X': 6, 'Y': 4, 'V0': 8}, {'X': 6, 'Y': 5, 'V0': 8}, {'X': 6, 'Y': 6, 'V0': 8},
+                            {'X': 6, 'Y': 7, 'V0': 8}, {'X': 7, 'Y': 0, 'V0': 8}, {'X': 7, 'Y': 0, 'V0': 6},
+                            {'X': 7, 'Y': 1, 'V0': 8}, {'X': 7, 'Y': 1, 'V0': 6}, {'X': 7, 'Y': 2, 'V0': 8},
+                            {'X': 7, 'Y': 2, 'V0': 6}, {'X': 7, 'Y': 3, 'V0': 8}, {'X': 7, 'Y': 3, 'V0': 6},
+                            {'X': 7, 'Y': 4, 'V0': 8}, {'X': 7, 'Y': 4, 'V0': 6}, {'X': 7, 'Y': 5, 'V0': 8},
+                            {'X': 7, 'Y': 5, 'V0': 6}, {'X': 7, 'Y': 7, 'V0': 8}, {'X': 7, 'Y': 7, 'V0': 6},
+                        ]
+                    ),
             ),
         ]):
             hypotheses, target, body, background, masks, constants, pos, neg, expected = entry
