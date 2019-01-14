@@ -8,6 +8,33 @@ Hypothesis = namedtuple('Hypothesis', ['clause', 'positives'])
 Candidate = namedtuple('Candidate', ['score', 'literal', 'positives', 'negatives'])
 
 
+def find_clause(
+        hypotheses: List['Clause'],
+        target: 'Literal',
+        background: List['Clause'],
+        literals: List['Literal'],
+        constants: List['Value'],
+        positives: List['Assignment'],
+        negatives: List['Assignment'],
+) -> Optional[Hypothesis]:
+    from foil.models import Clause
+
+    body, positives, negatives = [], [*positives], [*negatives]
+    while negatives:
+        candidate = find_literal(hypotheses, target, body, background, literals, constants, positives, negatives)
+        if candidate is None:
+            break
+
+        positives = candidate.positives
+        negatives = candidate.negatives
+        body.append(candidate.literal)
+
+    if not body:
+        return None  # TODO Needed?
+
+    return Hypothesis(Clause(target, body), positives)
+
+
 def find_literal(
         hypotheses: List['Clause'],
         target: 'Literal',
@@ -21,8 +48,7 @@ def find_literal(
     from foil.models import Clause
     from foil.models import Program
 
-    candidate = None
-    bound = max_gain(positives, negatives)
+    candidate, bound = None, max_gain(positives, negatives)
     for literal in literals:
         world = Program([*hypotheses, Clause(target, [*body, literal]), *background]).ground()
         positives_i = extend(positives, literal, constants, world)

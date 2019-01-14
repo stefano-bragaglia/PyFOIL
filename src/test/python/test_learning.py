@@ -122,7 +122,10 @@ neg_1_3 = []
 
 class LearningTest(TestCase):
 
-    def test_find_literal(self):
+    def test__find_clause(self):
+        pass
+
+    def test__find_literal(self):
         for i, entry in enumerate([
             (hypotheses_0, body_0, pos_0_0, neg_0_0, Candidate(20.91922489442482, edge_x_y, pos_0_1, neg_0_1)),
             (hypotheses_1, body_0, pos_1_0, neg_1_0, Candidate(8.818399062613263, edge_x_v0, pos_1_1, neg_1_1)),
