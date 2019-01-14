@@ -13,9 +13,9 @@ def foil(
         positives: List['Assignment'],
         negatives: List['Assignment'],
 ) -> List['Clause']:
-    hypotheses = []
+    hypotheses, literals, constants = [], get_literals(), get_constants()
     while positives:
-        hypothesis = find_clause(hypotheses, target, background, positives, negatives)
+        hypothesis = find_clause(hypotheses, target, background, literals, constants, positives, negatives)
         if hypothesis is None:
             break
 

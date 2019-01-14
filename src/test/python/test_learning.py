@@ -10,6 +10,7 @@ from foil.learning import exclude
 from foil.learning import extend
 from foil.learning import find_clause
 from foil.learning import find_literal
+from foil.learning import foil
 from foil.learning import gain
 from foil.learning import Hypothesis
 from foil.learning import max_gain
@@ -126,7 +127,18 @@ neg_1_3 = []
 class LearningTest(TestCase):
 
     def test__foil(self):
-        pass
+        for i, entry in enumerate([
+            (pos_0_0, neg_0_0, []),
+        ]):
+            positives, negatives, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = foil(target, background, positives, negatives)
+
+                assert_that(
+                    result,
+                    'foil(target: Literal, background: List[Clause], positives: List[Assignment],'
+                    ' negatives: List[Assignment]) -> List[Clause]:',
+                ).is_equal_to(expected)
 
     def test__exclude(self):
         for i, entry in enumerate([
