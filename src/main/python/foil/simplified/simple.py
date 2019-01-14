@@ -117,9 +117,19 @@ def extend(examples: List[Assignment], literal: Literal, world: List[Literal]) -
 
 
 def covers(examples: List[Assignment], examples_i: List[Assignment]) -> List[Assignment]:
-    reference = [pi.items() for pi in examples_i]
+    # reference = [pi.items() for pi in examples_i]
+    #
+    # return [e for e in examples if any(all(item in items for item in e.items()) for items in reference)]
 
-    return [e for e in examples if any(all(item in items for item in e.items()) for items in reference)]
+    if not examples:
+        return []
+
+    if not examples_i:
+        return examples
+
+    coverage = [{k: v for k, v in e.items() if k in examples[0]} for e in examples_i]
+
+    return [e for e in examples if e in coverage]
 
 
 
