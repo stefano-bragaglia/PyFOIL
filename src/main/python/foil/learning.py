@@ -51,12 +51,10 @@ def learn_clause(
         if candidate is None:
             break
 
-        print('\t', body, candidate.literal, '%.3f' % candidate.score)
         body.append(candidate.literal)
         pos = candidate.pos
         neg = candidate.neg
 
-    print(len(pos), len(neg))
     hypothesis = Hypothesis(Clause(target, body), pos)
 
     return hypothesis

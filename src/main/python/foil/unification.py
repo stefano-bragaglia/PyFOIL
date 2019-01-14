@@ -94,24 +94,8 @@ def simplify(subst: Substitution) -> Optional[Substitution]:
     return result
 
 
-_tabling = {}
-
-
-def resolve(program: 'Program', query: 'Literal', cache: bool = True) -> Optional[Derivation]:
-    global _tabling
-
-    if cache and program in _tabling and query in _tabling[program]:
-        return _tabling[program][query]
-
-    derivation = _resolve(program, query, cache)
-
-    if not cache:
-        return derivation
-
-    return _tabling.setdefault(program, {}).setdefault(query, derivation)
-
-
-def _resolve(program: 'Program', query: 'Literal', cache: bool) -> Optional[Derivation]:
+# @Tabling
+def resolve(program: 'Program', query: 'Literal') -> Optional[Derivation]:
     for i, clause in enumerate(program.clauses):
         substitution = clause.head.unify(query)
         if substitution is None:
@@ -123,7 +107,7 @@ def _resolve(program: 'Program', query: 'Literal', cache: bool) -> Optional[Deri
 
         for query in clause.body:
             substituted = query.substitute(substitution)
-            sub_goal = resolve(program, substituted, cache)
+            sub_goal = resolve(program, substituted)
             if not sub_goal:
                 return None
 
