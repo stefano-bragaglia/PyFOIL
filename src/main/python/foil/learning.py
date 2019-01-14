@@ -44,7 +44,7 @@ def find_literal(
         constants: List['Value'],
         positives: List['Assignment'],
         negatives: List['Assignment'],
-) -> Optional['Candidate']:
+) -> Optional[Candidate]:
     from foil.models import Clause
     from foil.models import Program
 

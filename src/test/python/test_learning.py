@@ -7,8 +7,10 @@ from foil.learning import Candidate
 from foil.learning import covers
 from foil.learning import entropy
 from foil.learning import extend
+from foil.learning import find_clause
 from foil.learning import find_literal
 from foil.learning import gain
+from foil.learning import Hypothesis
 from foil.learning import max_gain
 from foil.models import Clause
 from foil.models import Literal
@@ -123,7 +125,20 @@ neg_1_3 = []
 class LearningTest(TestCase):
 
     def test__find_clause(self):
-        pass
+        for i, entry in enumerate([
+            (hypotheses_0, pos_0_0, neg_0_0, Hypothesis(Clause(target, [edge_x_y]), pos_0_1)),
+            (hypotheses_1, pos_1_0, neg_1_0, Hypothesis(Clause(target, [edge_x_v0, path_v0_y]), pos_1_2)),
+        ]):
+            hypotheses, positives, negatives, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = find_clause(hypotheses, target, background, literals, constants, positives, negatives)
+
+                assert_that(
+                    result,
+                    'find_clause(hypotheses: List[Clause], target: Literal, background: List[Clause], '
+                    'literals: List[Literal], constants: List[Value], positives: List[Assignment], '
+                    'negatives: List[Assignment]) -> Optional[Hypothesis]:',
+                ).is_equal_to(expected)
 
     def test__find_literal(self):
         for i, entry in enumerate([
