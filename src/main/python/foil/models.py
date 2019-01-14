@@ -454,6 +454,6 @@ class Problem:
         return self._program.ground()
 
     def learn(self) -> List[Clause]:
-        from foil.learning import learn_hypotheses
+        from foil.old.learning import learn_hypotheses
 
         return learn_hypotheses(self._target, list(self.program.clauses), list(self._examples))

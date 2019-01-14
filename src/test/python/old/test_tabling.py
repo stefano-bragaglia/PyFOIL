@@ -6,11 +6,11 @@ from foil.models import Clause
 from foil.models import Example
 from foil.models import Literal
 from foil.models import Mask
-from foil.tabling import get_constants
-from foil.tabling import get_examples
-from foil.tabling import get_masks
-from foil.tabling import get_variables
-from foil.tabling import itemize
+from foil.old.tabling import get_constants
+from foil.old.tabling import get_examples
+from foil.old.tabling import get_masks
+from foil.old.tabling import get_variables
+from foil.old.tabling import itemize
 
 
 class TablingTest(TestCase):

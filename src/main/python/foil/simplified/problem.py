@@ -3,13 +3,12 @@ from itertools import permutations
 from typing import List
 from typing import Optional
 
-from foil.learning import Candidate
-from foil.learning import Hypothesis
+from foil.old.learning import Candidate
+from foil.old.learning import Hypothesis
 from foil.models import Assignment
 from foil.models import Clause
 from foil.models import Label
 from foil.models import Literal
-from foil.models import Program
 from foil.unification import is_variable
 
 

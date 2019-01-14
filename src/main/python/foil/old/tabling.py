@@ -33,7 +33,7 @@ class Tabling:
 
 @Tabling
 def get_constants(target: 'Literal', background: List['Clause']) -> List['Value']:
-    from foil.learning import get_constants
+    from foil.old.learning import get_constants
 
     return get_constants([target, *[l for c in background for l in c.literals]])
 
@@ -45,8 +45,8 @@ def get_examples(
         target: 'Literal',
         examples: List['Example'],
 ) -> Tuple[List['Assignment'], List['Assignment']]:
-    from foil.learning import get_assignments
-    from foil.learning import get_closure
+    from foil.old.learning import get_assignments
+    from foil.old.learning import get_closure
 
     pos, neg = get_assignments(examples)
     pos, neg = get_closure(world, constants, target, pos, neg)
@@ -56,20 +56,20 @@ def get_examples(
 
 @Tabling
 def get_masks(target: 'Literal', background: List['Clause']) -> List['Mask']:
-    from foil.learning import get_masks
+    from foil.old.learning import get_masks
 
     return get_masks([*[l for c in background for l in c.literals], target])
 
 
 @Tabling
 def get_variables(target: 'Literal', body: List['Literal']) -> List['Variable']:
-    from foil.learning import get_variables
+    from foil.old.learning import get_variables
 
     return get_variables([target, *body])
 
 
 @Tabling
 def itemize(variables: List['Variable'], arity: int) -> List[List['Variable']]:
-    from foil.learning import itemize
+    from foil.old.learning import itemize
 
     return itemize(variables, arity)

@@ -3,9 +3,9 @@ from unittest import TestCase
 
 from assertpy import assert_that
 
-from foil.heuristic import entropy
-from foil.heuristic import gain
-from foil.heuristic import max_gain
+from foil.old.heuristic import entropy
+from foil.old.heuristic import gain
+from foil.old.heuristic import max_gain
 
 
 class HeuristicTest(TestCase):

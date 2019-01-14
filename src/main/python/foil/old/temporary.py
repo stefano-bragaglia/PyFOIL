@@ -5,8 +5,8 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
-from foil.learning import Candidate
-from foil.learning import Hypothesis
+from foil.old.learning import Candidate
+from foil.old.learning import Hypothesis
 from foil.models import Assignment
 from foil.models import Clause
 from foil.models import Example
