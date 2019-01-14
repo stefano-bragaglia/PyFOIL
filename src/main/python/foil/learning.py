@@ -7,6 +7,34 @@ from typing import Optional
 Hypothesis = namedtuple('Hypothesis', ['clause', 'positives'])
 Candidate = namedtuple('Candidate', ['score', 'literal', 'positives', 'negatives'])
 
+def foil(
+        target: 'Literal',
+        background: List['Clause'],
+        positives: List['Assignment'],
+        negatives: List['Assignment'],
+) -> List['Clause']:
+    hypotheses = []
+    while positives:
+        hypothesis = find_clause(hypotheses, target, background, positives, negatives)
+        if hypothesis is None:
+            break
+
+        positives = exclude(positives, hypothesis.pos)
+        hypotheses.append(hypothesis.clause)
+
+    return hypotheses
+
+
+def exclude(examples: List['Assignment'], examples_i: List['Assignment']) -> List['Assignment']:
+    if not examples:
+        return []
+
+    if not examples_i:
+        return examples
+
+    coverage = [{k: v for k, v in e.items() if k in examples[0]} for e in examples_i]
+
+    return [e for e in examples if e not in coverage]
 
 def find_clause(
         hypotheses: List['Clause'],

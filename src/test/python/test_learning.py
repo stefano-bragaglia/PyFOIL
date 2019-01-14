@@ -6,6 +6,7 @@ from assertpy import assert_that
 from foil.learning import Candidate
 from foil.learning import covers
 from foil.learning import entropy
+from foil.learning import exclude
 from foil.learning import extend
 from foil.learning import find_clause
 from foil.learning import find_literal
@@ -123,6 +124,23 @@ neg_1_3 = []
 
 
 class LearningTest(TestCase):
+
+    def test__foil(self):
+        pass
+
+    def test__exclude(self):
+        for i, entry in enumerate([
+            (pos_0_0, pos_0_1, pos_1_0),
+            (pos_1_0, pos_1_2, []),
+        ]):
+            examples, examples_i, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = exclude(examples, examples_i)
+
+                assert_that(
+                    result,
+                    'exclude(examples: List[Assignment], examples_i: List[Assignment]) -> List[Assignment]:',
+                ).is_equal_to(expected)
 
     def test__find_clause(self):
         for i, entry in enumerate([
