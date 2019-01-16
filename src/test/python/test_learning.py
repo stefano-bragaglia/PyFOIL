@@ -12,10 +12,18 @@ from foil.learning import find_clause
 from foil.learning import find_literal
 from foil.learning import foil
 from foil.learning import gain
+from foil.learning import get_closure
+from foil.learning import get_constants
+from foil.learning import get_masks
+from foil.learning import get_signature
+from foil.learning import get_table
 from foil.learning import Hypothesis
+from foil.learning import itemize
 from foil.learning import max_gain
 from foil.models import Clause
+from foil.models import Example
 from foil.models import Literal
+from foil.models import Mask
 from foil.models import Program
 
 hypotheses_0 = []
@@ -38,16 +46,17 @@ background = [
     Clause.parse('edge(7,8).'),
 ]
 
-literals = [
-    Literal.parse('edge(X,V0)'), Literal.parse('edge(V0,Y)'),
-    Literal.parse('edge(V0,X)'), Literal.parse('edge(Y,V0)'),
-    Literal.parse('edge(Y,X)'), Literal.parse('edge(X,Y)'),
-    Literal.parse('edge(X,X)'), Literal.parse('edge(Y,Y)'),
-    Literal.parse('path(X,V0)'), Literal.parse('path(V0,Y)'),
-    Literal.parse('path(V0,X)'), Literal.parse('path(Y,V0)'),
-    Literal.parse('path(Y,X)'), Literal.parse('path(X,Y)'),
-    Literal.parse('path(X,X)'), Literal.parse('path(Y,Y)'),
-]
+# literals = [
+#     Literal.parse('edge(X,V0)'), Literal.parse('edge(V0,Y)'),
+#     Literal.parse('edge(V0,X)'), Literal.parse('edge(Y,V0)'),
+#     Literal.parse('edge(Y,X)'), Literal.parse('edge(X,Y)'),
+#     Literal.parse('edge(X,X)'), Literal.parse('edge(Y,Y)'),
+#     Literal.parse('path(X,V0)'), Literal.parse('path(V0,Y)'),
+#     Literal.parse('path(V0,X)'), Literal.parse('path(Y,V0)'),
+#     Literal.parse('path(Y,X)'), Literal.parse('path(X,Y)'),
+#     Literal.parse('path(X,X)'), Literal.parse('path(Y,Y)'),
+# ]
+masks = [Mask(False, 'edge', 2), Mask(False, 'path', 2)]
 constants = [0, 1, 2, 3, 4, 5, 6, 7, 8]
 
 pos_0_0 = [
@@ -126,13 +135,88 @@ neg_1_3 = []
 
 class LearningTest(TestCase):
 
+    def test__get_closure(self):
+        for i, entry in enumerate([
+            (background, [
+                Example({'X': 0, 'Y': 1}), Example({'X': 0, 'Y': 2}), Example({'X': 0, 'Y': 3}),
+                Example({'X': 0, 'Y': 4}), Example({'X': 0, 'Y': 5}), Example({'X': 0, 'Y': 6}),
+                Example({'X': 0, 'Y': 8}), Example({'X': 1, 'Y': 2}), Example({'X': 3, 'Y': 2}),
+                Example({'X': 3, 'Y': 4}), Example({'X': 3, 'Y': 5}), Example({'X': 3, 'Y': 6}),
+                Example({'X': 3, 'Y': 8}), Example({'X': 4, 'Y': 5}), Example({'X': 4, 'Y': 6}),
+                Example({'X': 4, 'Y': 8}), Example({'X': 6, 'Y': 8}), Example({'X': 7, 'Y': 6}),
+                Example({'X': 7, 'Y': 8}),
+            ], (pos_0_0, neg_0_0)),
+        ]):
+            world, examples, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = get_closure(target, constants, world, examples)
+
+                assert_that(
+                    result,
+                    'get_closure(target: Literal, constants: List[Value], world: List[Literal],'
+                    ' examples: List[Example]) -> Tuple[List[Assignment], List[Assignment]]:',
+                ).is_length(2)
+                if not expected[0]:
+                    assert_that(
+                        result[0],
+                        'get_closure(target: Literal, constants: List[Value], world: List[Literal],'
+                        ' examples: List[Example]) -> Tuple[List[Assignment], List[Assignment]]:',
+                    ).is_empty()
+                else:
+                    assert_that(
+                        result[0],
+                        'get_closure(target: Literal, constants: List[Value], world: List[Literal],'
+                        ' examples: List[Example]) -> Tuple[List[Assignment], List[Assignment]]:',
+                    ).contains_only(*expected[0])
+                if not expected[1]:
+                    assert_that(
+                        result[1],
+                        'get_closure(target: Literal, constants: List[Value], world: List[Literal],'
+                        ' examples: List[Example]) -> Tuple[List[Assignment], List[Assignment]]:',
+                    ).is_empty()
+                else:
+                    assert_that(
+                        result[1],
+                        'get_closure(target: Literal, constants: List[Value], world: List[Literal],'
+                        ' examples: List[Example]) -> Tuple[List[Assignment], List[Assignment]]:',
+                    ).contains_only(*expected[1])
+
+    def test__get_masks(self):
+        for i, entry in enumerate([
+            ([target, *[l for c in background for l in c.literals]], [Mask(False, 'path', 2), Mask(False, 'edge', 2)]),
+        ]):
+            literals, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = get_masks(literals)
+
+                assert_that(
+                    result,
+                    'get_masks(literals: List[Literal]) -> List[Mask]:',
+                ).contains_only(*expected)
+
+    def test__get_constants(self):
+        for i, entry in enumerate([
+            ([target, *[l for c in background for l in c.literals]], [0, 1, 2, 3, 4, 5, 6, 7, 8]),
+        ]):
+            literals, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = get_constants(literals)
+
+                assert_that(
+                    result,
+                    'get_constants(literals: List[Literal]) -> List[Value]:',
+                ).contains_only(*expected)
+
     def test__foil(self):
         for i, entry in enumerate([
-            (pos_0_0, neg_0_0, []),
+            (pos_0_0, neg_0_0, [
+                Clause.parse('path(X,Y) :- edge(X,Y).'),
+                Clause.parse('path(X,Y) :- edge(X,V0), path(V0,Y).'),
+            ]),
         ]):
             positives, negatives, expected = entry
             with self.subTest(i=i, value=entry):
-                result = foil(target, background, positives, negatives)
+                result = foil(target, background, masks, constants, positives, negatives)
 
                 assert_that(
                     result,
@@ -161,7 +245,7 @@ class LearningTest(TestCase):
         ]):
             hypotheses, positives, negatives, expected = entry
             with self.subTest(i=i, value=entry):
-                result = find_clause(hypotheses, target, background, literals, constants, positives, negatives)
+                result = find_clause(hypotheses, target, background, masks, constants, positives, negatives)
 
                 assert_that(
                     result,
@@ -178,7 +262,7 @@ class LearningTest(TestCase):
         ]):
             hypotheses, body, positives, negatives, expected = entry
             with self.subTest(i=i, value=entry):
-                result = find_literal(hypotheses, target, body, background, literals, constants, positives, negatives)
+                result = find_literal(hypotheses, target, body, background, masks, constants, positives, negatives)
 
                 assert_that(
                     result,
@@ -200,6 +284,94 @@ class LearningTest(TestCase):
                 assert_that(
                     result,
                     'max_gain(pos: List[Assignment], neg: List[Assignment]) -> float:',
+                ).is_equal_to(expected)
+
+    def test__get_table(self):
+        for i, entry in enumerate([
+            ([target], {0: 'X', 1: 'Y'}),
+            ([target, edge_x_y], {0: 'X', 1: 'Y'}),
+            ([target, edge_x_v0], {0: 'X', 1: 'Y', 2: 'V0'}),
+            ([target, edge_x_v0, path_v0_y], {0: 'X', 1: 'Y', 2: 'V0'}),
+            ([target, edge_x_v0, edge_v0_y], {0: 'X', 1: 'Y', 2: 'V0'}),
+        ]):
+            literals, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = get_table(literals)
+
+                assert_that(
+                    result,
+                    'get_table(literals: List[Literal]) -> Dict[int, Variable]:',
+                ).is_equal_to(expected)
+
+    def test__itemize(self):
+        for i, entry in enumerate([
+            ({0: 'X'}, 1, [['X']]),
+            ({0: 'X'}, 2, [['V0', 'X'], ['X', 'V0'], ['X', 'X']]),
+            ({0: 'X'}, 3, [
+                ['V0', 'V0', 'X'],
+                ['V0', 'V1', 'X'],
+                ['V0', 'X', 'V0'],
+                ['V0', 'X', 'V1'],
+                ['V0', 'X', 'X'],
+                ['X', 'V0', 'V0'],
+                ['X', 'V0', 'V1'],
+                ['X', 'V0', 'X'],
+                ['X', 'X', 'V0'],
+                ['X', 'X', 'X'],
+            ]),
+            ({0: 'X', 1: 'Y'}, 2, [
+                ['V0', 'X'],
+                ['V0', 'Y'],
+                ['X', 'V0'],
+                ['X', 'X'],
+                ['X', 'Y'],
+                ['Y', 'V0'],
+                ['Y', 'X'],
+                ['Y', 'Y'],
+            ]),
+        ]):
+            table, arity, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = itemize(table, arity)
+
+                assert_that(
+                    result,
+                    'itemize(table: Dict[int, Variable], arity: int) -> List[List[Variable]]:',
+                ).contains_only(*expected)
+
+    def test__get_signature(self):
+        for i, entry in enumerate([
+            ({0: 'X'}, (0, 1, 2), ['X', 'V0', 'V1']),
+            ({0: 'X', 1: 'Y'}, (0, 0), ['X', 'X']),
+            ({0: 'X', 1: 'Y'}, (0, 1), ['X', 'Y']),
+            ({0: 'X', 1: 'Y'}, (0, 2), ['X', 'V0']),
+            ({0: 'X', 1: 'Y'}, (1, 0), ['Y', 'X']),
+            ({0: 'X', 1: 'Y'}, (1, 1), ['Y', 'Y']),
+            ({0: 'X', 1: 'Y'}, (1, 2), ['Y', 'V0']),
+            ({0: 'X', 1: 'Y'}, (2, 0), ['V0', 'X']),
+            ({0: 'X', 1: 'Y'}, (2, 1), ['V0', 'Y']),
+            ({0: 'X', 1: 'Y'}, (2, 2), ['V0', 'V0']),
+            ({0: 'X', 1: 'Y'}, (0, 3), ['X', 'V0']),
+            ({0: 'X', 1: 'Y'}, (1, 3), ['Y', 'V0']),
+            ({0: 'X', 1: 'Y'}, (3, 0), ['V0', 'X']),
+            ({0: 'X', 1: 'Y'}, (3, 1), ['V0', 'Y']),
+            ({0: 'X', 1: 'Y'}, (3, 3), ['V0', 'V0']),
+            ({0: 'X', 1: 'Y'}, (0, 0, 0), ['X', 'X', 'X']),
+            ({0: 'X', 1: 'Y'}, (0, 0, 1), ['X', 'X', 'Y']),
+            ({0: 'X', 1: 'Y'}, (0, 1, 0), ['X', 'Y', 'X']),
+            ({0: 'X', 1: 'Y'}, (0, 1, 1), ['X', 'Y', 'Y']),
+            ({0: 'X', 1: 'Y'}, (1, 0, 0), ['Y', 'X', 'X']),
+            ({0: 'X', 1: 'Y'}, (1, 0, 1), ['Y', 'X', 'Y']),
+            ({0: 'X', 1: 'Y'}, (1, 1, 0), ['Y', 'Y', 'X']),
+            ({0: 'X', 1: 'Y'}, (1, 1, 1), ['Y', 'Y', 'Y']),
+        ]):
+            table, combination, expected = entry
+            with self.subTest(i=i, value=entry):
+                result = get_signature(table, combination)
+
+                assert_that(
+                    result,
+                    'get_signature(table: Dict[int, Variable], combination: Tuple[int, ...]) -> List[Variable]:',
                 ).is_equal_to(expected)
 
     def test__extend(self):
